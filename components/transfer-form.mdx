@@ -1,0 +1,344 @@
+---
+title: TransferForm
+description: Cross-chain token transfer interface with recipient address and network selection
+---
+
+The `TransferForm` component provides a complete interface for transferring tokens to other addresses across different blockchain networks. It handles recipient validation, quote fetching, and transfer execution.
+
+## Import
+
+```typescript
+import { TransferForm } from '@/components/TransferForm';
+```
+
+## Overview
+
+The TransferForm is a self-contained component that manages the complete token transfer workflow:
+
+- **Asset Selection**: Choose which token to transfer
+- **Amount Input**: Specify transfer amount with balance validation
+- **Recipient Address**: Enter destination wallet address
+- **Network Selection**: Choose destination blockchain network
+- **Quote Fetching**: Automatically calculates transfer costs
+- **Transaction Execution**: Handles the complete transfer flow
+
+## Component Structure
+
+This component does not accept props - it's a standalone form that manages its own state.
+
+```typescript
+export const TransferForm: React.FC = () => {
+  // Component implementation
+}
+```
+
+## Key Features
+
+### Recipient Management
+
+The component validates recipient addresses and supports ENS names:
+
+```typescript
+const [recipientAddress, setRecipientAddress] = useState<string>('');
+const [recipientChain, setRecipientChain] = useState<string>('eip155:42161'); // Default to Arbitrum
+
+const isValidAddress = (address: string): boolean => {
+  return /^0x[a-fA-F0-9]{40}$/.test(address) || address.endsWith('.eth');
+};
+```
+
+### Cross-Chain Support
+
+Users can select the destination network from all supported chains:
+
+```typescript
+<Select value={recipientChain} onValueChange={handleRecipientChainChange}>
+  <SelectContent>
+    {chains.map(chain => (
+      <SelectItem key={chain.chain.reference} value={chain.chain.chain}>
+        {getChainName(chain.chain.reference)}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+### Balance Validation
+
+Built-in balance checking prevents insufficient balance errors:
+
+```typescript
+const hasSufficientBalance = (amount: string) => {
+  if (!assetBalance || !selectedAssetData || !amount) return false;
+  
+  const parsedAmount = parseTokenAmount(amount, selectedAssetData.decimals || 18);
+  return BigInt(assetBalance.balance) >= BigInt(parsedAmount);
+};
+```
+
+## Usage Example
+
+```tsx
+import { TransferForm } from '@/components/TransferForm';
+
+function TransferPage() {
+  return (
+    <div className="container mx-auto py-8">
+      <TransferForm />
+    </div>
+  );
+}
+```
+
+## State Management
+
+### Asset State
+
+<ParamField path="selectedAsset" type="string" default="'ob:usdc'">
+  The aggregated asset ID of the token to transfer
+</ParamField>
+
+<ParamField path="amount" type="string">
+  The human-readable amount to transfer
+</ParamField>
+
+<ParamField path="parsedAmount" type="string">
+  The amount converted to the token's base unit (wei for ETH, etc.)
+</ParamField>
+
+### Recipient State
+
+<ParamField path="recipientAddress" type="string">
+  The destination wallet address (supports 0x addresses and ENS names)
+</ParamField>
+
+<ParamField path="recipientChain" type="string">
+  The CAIP-2 chain identifier for the destination network (e.g., 'eip155:42161' for Arbitrum)
+</ParamField>
+
+## Quote Lifecycle
+
+### 1. Quote Request
+
+Triggered when amount, asset, recipient address, or destination chain changes:
+
+```typescript
+if (authenticated && embeddedWallet && selectedAsset && 
+    recipientAddress && isValidAddress(recipientAddress) &&
+    hasSufficientBalance(value)) {
+  debouncedGetQuote({
+    fromTokenAmount: parsed,
+    fromAggregatedAssetId: selectedAsset,
+    toAggregatedAssetId: selectedAsset, // Same asset for transfers
+    recipientAddress: `${recipientChain}:${recipientAddress}`,
+  });
+}
+```
+
+### 2. Quote Display
+
+Shows transfer quote details including:
+- Transfer cost
+- Gas estimates
+- Quote expiration countdown
+- Net amount recipient receives
+
+### 3. Quote Execution
+
+Executes the transfer when the user confirms:
+
+```typescript
+<Button
+  className="w-full"
+  onClick={executeQuote}
+  disabled={getTransferButtonState().disabled}
+>
+  <Send className="mr-2 h-4 w-4" />
+  {getTransferButtonState().text}
+</Button>
+```
+
+## User Interactions
+
+### Percentage Buttons
+
+Quick-select buttons for common transfer amounts:
+
+```typescript
+onPercentageClick={percentage => {
+  if (assetBalance && selectedAssetData) {
+    const balance = assetBalance.balance;
+    const decimals = selectedAssetData.decimals || 18;
+    const maxAmount = formatTokenAmount(balance, decimals);
+    const targetAmount = ((parseFloat(maxAmount) * percentage) / 100).toString();
+    
+    setAmount(targetAmount);
+    // Trigger quote fetch
+  }
+}}
+```
+
+### Address Validation
+
+Real-time validation feedback:
+
+```tsx
+{recipientAddress && !isValidAddress(recipientAddress) && (
+  <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+    Please enter a valid Ethereum address
+  </div>
+)}
+```
+
+### Network Selection
+
+Visual network selector with chain logos:
+
+```tsx
+<SelectValue>
+  {recipientChain && (
+    <div className="flex items-center gap-2">
+      <img
+        src={getChainLogoUrl(extractChainIdFromCAIP(recipientChain))}
+        alt={getChainName(extractChainIdFromCAIP(recipientChain))}
+        className="w-5 h-5 rounded-full"
+      />
+      <span>{getChainName(extractChainIdFromCAIP(recipientChain))}</span>
+    </div>
+  )}
+</SelectValue>
+```
+
+## Button States
+
+The transfer button dynamically updates based on application state:
+
+| State | Button Text | Disabled |
+|-------|-------------|----------|
+| Not authenticated | "Login to Transfer" | Yes |
+| Loading quote | "Getting Quote..." | Yes |
+| Executing | "Executing Transfer..." | Yes |
+| Insufficient balance | "Insufficient Balance" | Yes |
+| Invalid address | "Transfer" | Yes |
+| Ready | "Transfer" | No |
+
+## Error Handling
+
+### Address Validation Errors
+
+```tsx
+{recipientAddress && !isValidAddress(recipientAddress) && (
+  <div className="mt-2 text-sm text-red-600">
+    Please enter a valid Ethereum address
+  </div>
+)}
+```
+
+### Quote Errors
+
+```tsx
+{quote?.error && (
+  <Alert variant="destructive">
+    <TriangleAlert className="h-4 w-4" />
+    <AlertTitle>Quote Error</AlertTitle>
+    <AlertDescription>{quote?.message}</AlertDescription>
+  </Alert>
+)}
+```
+
+### API Errors
+
+```tsx
+{error && (
+  <Alert variant="destructive">
+    <TriangleAlert className="h-4 w-4" />
+    <AlertTitle>An error occurred</AlertTitle>
+    <AlertDescription>{error}</AlertDescription>
+  </Alert>
+)}
+```
+
+## Transaction Completion
+
+After a successful transfer:
+
+1. Form inputs are cleared
+2. Quote state is reset
+3. User balances are refreshed
+
+```typescript
+const handleTransactionComplete = useCallback(() => {
+  setAmount('');
+  setParsedAmount('');
+  setRecipientAddress('');
+  resetQuote();
+  
+  if (predictedAddress) {
+    fetchBalances();
+  }
+}, [predictedAddress, fetchBalances, resetQuote]);
+```
+
+## Onboarding Support
+
+The component includes data attributes for onboarding tooltips:
+
+- `data-onboarding="transfer-card"`: Main card container
+- `data-onboarding="transfer-token"`: Token selection and amount input
+- `data-onboarding="transfer-recipient"`: Recipient address input
+- `data-onboarding="transfer-network"`: Network selection dropdown
+- `data-onboarding="transfer-button"`: Execute transfer button
+
+## Dependencies
+
+<CodeGroup>
+
+```typescript Components
+import { TokenInput } from '@/components/TokenInput';
+import { QuoteDetails } from '@/components/QuoteDetails';
+import { QuoteCountdown } from '@/components/QuoteCountdown';
+import { TransactionStatus } from '@/components/TransactionStatus';
+```
+
+```typescript UI Components
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+```
+
+```typescript Hooks
+import { useAssets, useChains, useQuotes, useBalances, useEmbeddedWallet } from '@/lib/hooks';
+```
+
+```typescript Utilities
+import { formatTokenAmount, parseTokenAmount } from '@/lib/utils/token';
+import { getChainName, getChainLogoUrl, extractChainIdFromCAIP } from '@/lib/types/chains';
+import debounce from 'lodash.debounce';
+```
+
+</CodeGroup>
+
+## Address Format
+
+The recipient address is formatted as a CAIP-10 account identifier:
+
+```
+{chainId}:{address}
+```
+
+Example:
+```
+eip155:42161:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+```
+
+## Network Support
+
+All chains returned by the `useChains` hook are supported as destination networks. The default network is Arbitrum (eip155:42161).
+
+## Related Components
+
+- [TokenInput](/components/token-input) - Asset selection and amount input
+- [QuoteDetails](/components/quote-details) - Quote information display
+- [SwapForm](/components/swap-form) - Token swap interface

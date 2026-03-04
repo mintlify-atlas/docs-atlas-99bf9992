@@ -1,0 +1,401 @@
+---
+title: Transaction history
+description: Track all your swaps and transfers across chains with detailed transaction information
+---
+
+Transaction history provides a complete record of all your swaps and transfers performed through OneBalance. You can view transaction details, check status, and access blockchain explorers for verification.
+
+## How it works
+
+The transaction history system:
+
+1. Fetches all transactions associated with your account
+2. Displays both swap and transfer operations
+3. Shows real-time transaction status
+4. Provides links to blockchain explorers
+5. Supports pagination for large transaction sets
+
+All transactions are tracked from initiation through completion or failure.
+
+## Implementation
+
+### Transaction history page
+
+The history page uses the `TransactionHistory` component:
+
+```tsx app/(trading)/history/page.tsx
+import { TransactionHistory } from '@/components/TransactionHistory';
+import { TabNavigation } from '@/components/TabNavigation';
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+
+export default function HistoryPage() {
+  const { predictedAddress, getPredictedAddress } = usePredictedAddress();
+  
+  // Get predicted address when wallet connects
+  useEffect(() => {
+    if (authenticated && embeddedWallet && !predictedAddress) {
+      getPredictedAddress();
+    }
+  }, [authenticated, embeddedWallet, predictedAddress]);
+  
+  return (
+    <div className="p-4 flex-1">
+      <TabNavigation />
+      <div className="max-w-4xl mx-auto">
+        <TransactionHistory userAddress={predictedAddress || ''} />
+      </div>
+    </div>
+  );
+}
+```
+
+### Fetching transaction history
+
+Use the `useTransactionHistory` hook to load transactions:
+
+```typescript lib/hooks/useTransactionHistory.ts
+import { useTransactionHistory } from '@/lib/hooks/useTransactionHistory';
+
+const {
+  transactions,
+  loading,
+  error,
+  hasMore,
+  loadMore,
+  refresh,
+} = useTransactionHistory(userAddress);
+```
+
+### API integration
+
+The transactions API supports pagination:
+
+```typescript lib/api/transactions.ts
+export const transactionsApi = {
+  getTransactionHistory: async (
+    params: TransactionHistoryParams
+  ): Promise<TransactionHistoryResponse> => {
+    const queryParams = new URLSearchParams({
+      user: params.user,
+      limit: params.limit.toString(),
+    });
+    
+    if (params.continuation) {
+      queryParams.append('continuation', params.continuation);
+    }
+    
+    const response = await apiClient.get(
+      `/status/get-tx-history?${queryParams.toString()}`
+    );
+    return response.data;
+  },
+};
+```
+
+## Transaction types
+
+Two types of transactions are displayed:
+
+### Swaps
+
+Token exchanges across or within chains:
+
+```tsx components/TransactionHistory.tsx
+const getTypeBadge = (type: string) => {
+  return type === 'SWAP' ? (
+    <Badge variant="default" className="bg-blue-100 text-blue-800">
+      <ArrowUpRight className="h-3 w-3 mr-1" />
+      Swap
+    </Badge>
+  ) : (
+    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+      <ArrowDownLeft className="h-3 w-3 mr-1" />
+      Transfer
+    </Badge>
+  );
+};
+```
+
+### Transfers
+
+Cross-chain token transfers to other addresses:
+
+```typescript components/TransactionHistory.tsx
+// Determine transaction type
+const transaction =
+  initialTransaction.originToken.aggregatedAssetId ===
+  initialTransaction.destinationToken?.aggregatedAssetId
+    ? { ...initialTransaction, type: 'TRANSFER' }
+    : { ...initialTransaction };
+```
+
+## Transaction status
+
+Each transaction has one of several status values:
+
+<AccordionGroup>
+  <Accordion title="COMPLETED">
+    Transaction successfully executed and confirmed on all chains.
+    
+    ```tsx
+    <CheckCircle className="h-4 w-4 text-green-600" />
+    ```
+  </Accordion>
+  
+  <Accordion title="PENDING">
+    Transaction submitted and awaiting confirmation.
+    
+    ```tsx
+    <Clock className="h-4 w-4 text-yellow-600" />
+    ```
+  </Accordion>
+  
+  <Accordion title="FAILED">
+    Transaction failed during execution.
+    
+    ```tsx
+    <XCircle className="h-4 w-4 text-red-600" />
+    ```
+  </Accordion>
+  
+  <Accordion title="REFUNDED">
+    Transaction failed and funds were returned.
+    
+    ```tsx
+    <AlertTriangle className="h-4 w-4 text-orange-600" />
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Status indicators
+
+Status is displayed with color-coded badges:
+
+```typescript components/TransactionHistory.tsx
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'COMPLETED':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/20';
+    case 'FAILED':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/20';
+    case 'REFUNDED':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20';
+    default:
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20';
+  }
+};
+```
+
+## Transaction details
+
+Each transaction card is expandable to show detailed information:
+
+```tsx components/TransactionHistory.tsx
+<Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
+  <CollapsibleTrigger>
+    {/* Transaction summary */}
+  </CollapsibleTrigger>
+  
+  <CollapsibleContent>
+    {/* Detailed transaction information */}
+    <div className="space-y-4">
+      {/* Quote ID */}
+      <div className="bg-muted/40 rounded-lg p-3">
+        <div className="text-xs text-muted-foreground">Quote ID</div>
+        <div className="font-mono text-xs">{transaction.quoteId}</div>
+      </div>
+      
+      {/* Token flow visualization */}
+      {/* Network information */}
+      {/* Transaction hashes with explorer links */}
+    </div>
+  </CollapsibleContent>
+</Collapsible>
+```
+
+## Amount formatting
+
+Amounts are formatted based on their magnitude:
+
+```typescript components/TransactionHistory.tsx
+const formatTokenAmountForDisplay = (amount: string, aggregatedAssetId: string) => {
+  const asset = assets.find(a => a.aggregatedAssetId === aggregatedAssetId);
+  const decimals = asset?.decimals || 18;
+  
+  const formatted = formatTokenAmount(amount, decimals);
+  const num = parseFloat(formatted);
+  
+  // Format based on the size of the number
+  if (num === 0) return '0';
+  if (num < 0.000001) return num.toExponential(2);
+  if (num < 0.01) return num.toFixed(6);
+  if (num < 1) return num.toFixed(4);
+  if (num < 1000) return num.toFixed(2);
+  if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
+  return (num / 1000000).toFixed(1) + 'M';
+};
+```
+
+## Chain operations
+
+Transactions include details about operations on each chain:
+
+```typescript lib/types/quote.ts
+interface QuoteStatus {
+  quoteId: string;
+  status: string;
+  originChainOperations: {
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }[];
+  destinationChainOperations: {
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }[];
+}
+```
+
+### Explorer links
+
+Each operation includes a link to the blockchain explorer:
+
+```tsx components/TransactionHistory.tsx
+<Button variant="outline" size="sm" asChild>
+  <a
+    href={op.explorerUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center gap-1"
+  >
+    <span className="text-xs">View</span>
+    <ExternalLink className="h-3 w-3" />
+  </a>
+</Button>
+```
+
+## Pagination
+
+Load more transactions as the user scrolls:
+
+```typescript lib/hooks/useTransactionHistory.ts
+const loadMore = useCallback(
+  (limit: number = 10) => {
+    if (!userAddress || !continuation || loading) return;
+    
+    fetchTransactionHistory({
+      user: userAddress,
+      limit,
+      continuation,
+    });
+  },
+  [userAddress, continuation, loading, fetchTransactionHistory]
+);
+```
+
+### Load more button
+
+```tsx components/TransactionHistory.tsx
+{hasMore && (
+  <div className="text-center pt-4">
+    <Button
+      variant="outline"
+      onClick={() => loadMore()}
+      disabled={loading}
+      className="w-full"
+    >
+      {loading ? (
+        <>
+          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          Loading more...
+        </>
+      ) : (
+        'Load More Transactions'
+      )}
+    </Button>
+  </div>
+)}
+```
+
+## Refresh functionality
+
+Users can manually refresh their transaction history:
+
+```tsx components/TransactionHistory.tsx
+<Button
+  variant="outline"
+  size="sm"
+  onClick={refresh}
+  disabled={loading}
+>
+  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+  Refresh
+</Button>
+```
+
+## Empty states
+
+Handle cases where the user has no transactions:
+
+```tsx components/TransactionHistory.tsx
+{!loading && transactions.length === 0 && !error && (
+  <div className="text-center py-8">
+    <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+    <h4 className="text-lg font-semibold mb-2">No transactions yet</h4>
+    <p className="text-muted-foreground">
+      Your transaction history will appear here
+    </p>
+  </div>
+)}
+```
+
+## Timestamp formatting
+
+Dates are formatted using `date-fns`:
+
+```typescript
+import { format } from 'date-fns';
+
+<div className="text-xs text-muted-foreground">
+  {format(new Date(transaction.timestamp), 'MMM dd')}
+</div>
+<div className="text-xs text-muted-foreground">
+  {format(new Date(transaction.timestamp), 'HH:mm')}
+</div>
+```
+
+## Best practices
+
+<Steps>
+  <Step title="Load on authentication">
+    Automatically fetch transaction history when the user connects their wallet.
+  </Step>
+  
+  <Step title="Implement pagination">
+    Load transactions in batches (10-20 at a time) to improve performance.
+  </Step>
+  
+  <Step title="Provide explorer links">
+    Always include links to blockchain explorers so users can verify transactions independently.
+  </Step>
+  
+  <Step title="Show clear status indicators">
+    Use color coding and icons to make transaction status immediately visible.
+  </Step>
+  
+  <Step title="Handle errors gracefully">
+    Display helpful error messages when transaction history fails to load.
+  </Step>
+</Steps>
+
+<Note>
+Transaction history is stored by OneBalance and persists across sessions. Users can view their complete transaction history anytime they connect their wallet.
+</Note>
+
+## API reference
+
+For more details on transaction-related endpoints:
+
+- [Get Transaction History](/api/transactions#gettransactionhistory)
+- [Get Quote Status](/api/quotes#getquotestatus)

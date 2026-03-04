@@ -1,0 +1,414 @@
+---
+title: Privy wallet integration
+description: Integrate Privy for Web3 authentication, embedded wallets, and transaction signing in your chain-abstracted application
+---
+
+Privy provides seamless Web3 authentication with embedded wallet support, enabling users to interact with blockchain applications without managing private keys or installing browser extensions.
+
+## Privy provider setup
+
+The Privy provider is configured in `app/providers.tsx` with embedded wallet support:
+
+```typescript app/providers.tsx
+import { PrivyProvider } from '@privy-io/react-auth';
+
+export const Providers = ({ children }: ProvidersProps) => (
+  <PrivyProvider
+    appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
+    config={{
+      embeddedWallets: {
+        createOnLogin: 'users-without-wallets',
+      },
+      loginMethods: ['email', 'passkey', 'wallet'],
+      appearance: {
+        theme: 'light',
+        accentColor: '#FFAB40',
+      },
+    }}
+  >
+    <PredictedAddressProvider>
+      {children}
+    </PredictedAddressProvider>
+  </PrivyProvider>
+);
+```
+
+### Configuration options
+
+<ParamField path="appId" type="string" required>
+  Your Privy application ID from the [Privy Dashboard](https://dashboard.privy.io).
+</ParamField>
+
+<ParamField path="config.embeddedWallets.createOnLogin" type="string" default="users-without-wallets">
+  Automatically create embedded wallets for users who don't have an external wallet connected.
+  
+  **Options**: `'users-without-wallets'` | `'all-users'` | `'off'`
+</ParamField>
+
+<ParamField path="config.loginMethods" type="array">
+  Supported authentication methods for users.
+  
+  **Options**: `'email'`, `'passkey'`, `'wallet'`, `'google'`, `'twitter'`, `'discord'`, `'github'`
+</ParamField>
+
+<ParamField path="config.appearance" type="object">
+  Customize the Privy modal appearance.
+  
+  - `theme`: `'light'` | `'dark'`
+  - `accentColor`: Hex color code for buttons and accents
+</ParamField>
+
+## Authentication flow
+
+Privy provides hooks for managing user authentication:
+
+### Login and logout
+
+```typescript components/ConnectButton.tsx
+import { usePrivy } from '@privy-io/react-auth';
+import { Button } from '@/components/ui/button';
+
+export const ConnectButton = () => {
+  const { login, logout, authenticated, ready } = usePrivy();
+
+  if (!ready) {
+    return <Button disabled>Loading...</Button>;
+  }
+
+  if (!authenticated) {
+    return (
+      <Button onClick={login}>
+        <Wallet className="h-4 w-4" />
+        Login
+      </Button>
+    );
+  }
+
+  return (
+    <Button onClick={logout}>
+      <LogOut className="h-4 w-4" />
+      Logout
+    </Button>
+  );
+};
+```
+
+See the complete implementation at `components/ConnectButton.tsx:1`.
+
+### usePrivy hook
+
+The `usePrivy` hook provides access to authentication state and methods:
+
+<ParamField path="authenticated" type="boolean">
+  Whether the user is currently authenticated.
+</ParamField>
+
+<ParamField path="ready" type="boolean">
+  Whether the Privy SDK has finished initializing.
+</ParamField>
+
+<ParamField path="login" type="function">
+  Opens the Privy login modal.
+</ParamField>
+
+<ParamField path="logout" type="function">
+  Logs out the current user.
+</ParamField>
+
+<ParamField path="user" type="object">
+  The authenticated user's profile information.
+</ParamField>
+
+## Embedded wallet access
+
+Access the user's embedded wallet using the `useWallets` hook:
+
+```typescript lib/hooks/useEmbeddedWallet.ts
+import { useWallets } from '@privy-io/react-auth';
+import { ConnectedWallet } from '@privy-io/react-auth';
+
+export const useEmbeddedWallet = (): ConnectedWallet | null => {
+  const { wallets } = useWallets();
+  return wallets.find(wallet => wallet.walletClientType === 'privy') || wallets[0] || null;
+};
+```
+
+This custom hook:
+- Retrieves all connected wallets
+- Prioritizes Privy embedded wallets
+- Falls back to the first available wallet
+- Returns `null` if no wallets are connected
+
+### Using the embedded wallet
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+
+function Component() {
+  const embeddedWallet = useEmbeddedWallet();
+
+  if (!embeddedWallet) {
+    return <p>No wallet connected</p>;
+  }
+
+  return (
+    <div>
+      <p>Address: {embeddedWallet.address}</p>
+      <p>Type: {embeddedWallet.walletClientType}</p>
+    </div>
+  );
+}
+```
+
+## Predicted address context
+
+The application uses a context provider to manage OneBalance account addresses:
+
+```typescript lib/contexts/PredictedAddressContext.tsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useEmbeddedWallet } from '@/lib/hooks/useEmbeddedWallet';
+import { accountApi } from '@/lib/api/account';
+
+export const PredictedAddressProvider: React.FC<{ children: React.ReactNode }> = ({ 
+  children 
+}) => {
+  const [predictedAddress, setPredictedAddress] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const embeddedWallet = useEmbeddedWallet();
+
+  const getPredictedAddress = useCallback(async () => {
+    if (!embeddedWallet?.address) return null;
+    
+    // Return cached address if available
+    if (predictedAddress) return predictedAddress;
+
+    setIsLoading(true);
+    try {
+      const address = embeddedWallet.address;
+      const predicted = await accountApi.predictAddress(address, address);
+      setPredictedAddress(predicted);
+      return predicted;
+    } catch (err) {
+      console.error('Failed to predict address:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [embeddedWallet, predictedAddress]);
+
+  return (
+    <PredictedAddressContext.Provider value={{
+      predictedAddress,
+      getPredictedAddress,
+      isLoading,
+      error: null,
+    }}>
+      {children}
+    </PredictedAddressContext.Provider>
+  );
+};
+```
+
+See the full implementation at `lib/contexts/PredictedAddressContext.tsx:1`.
+
+### Using the predicted address
+
+```typescript
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+
+function Component() {
+  const { predictedAddress, getPredictedAddress, isLoading } = usePredictedAddress();
+
+  useEffect(() => {
+    if (!predictedAddress) {
+      getPredictedAddress();
+    }
+  }, [predictedAddress]);
+
+  return <p>Account: {predictedAddress}</p>;
+}
+```
+
+## Transaction signing
+
+Privy wallets use EIP-712 typed data signing for secure transaction approval:
+
+```typescript lib/utils/privySigningUtils.ts
+import { Address, createWalletClient, custom, Hash } from 'viem';
+import { ConnectedWallet } from '@privy-io/react-auth';
+
+export const signTypedDataWithPrivy =
+  (embeddedWallet: ConnectedWallet) =>
+  async (typedData: any): Promise<Hash> => {
+    const provider = await embeddedWallet.getEthereumProvider();
+    const walletClient = createWalletClient({
+      transport: custom(provider),
+      account: embeddedWallet.address as Address,
+    });
+
+    return walletClient.signTypedData(typedData);
+  };
+```
+
+### Signing chain operations
+
+```typescript lib/utils/privySigningUtils.ts
+export const signOperation =
+  (embeddedWallet: ConnectedWallet) =>
+  (operation: ChainOperation): (() => Promise<ChainOperation>) =>
+  async () => {
+    const signature = await signTypedDataWithPrivy(embeddedWallet)(operation.typedDataToSign);
+
+    return {
+      ...operation,
+      userOp: { ...operation.userOp, signature },
+    };
+  };
+```
+
+### Signing quotes
+
+The `signQuote` function signs all operations in a quote:
+
+```typescript lib/utils/privySigningUtils.ts
+export const signQuote = async (quote: Quote, embeddedWallet: ConnectedWallet) => {
+  const signWithEmbeddedWallet = signOperation(embeddedWallet);
+
+  const signedQuote = { ...quote };
+
+  // Sign all origin chain operations
+  signedQuote.originChainsOperations = await sequentialPromises(
+    quote.originChainsOperations.map(signWithEmbeddedWallet)
+  );
+
+  // Sign destination operation if present
+  if (quote.destinationChainOperation) {
+    signedQuote.destinationChainOperation = await signWithEmbeddedWallet(
+      quote.destinationChainOperation
+    )();
+  }
+
+  return signedQuote;
+};
+```
+
+<Note>
+  Operations are signed sequentially to ensure proper nonce ordering and prevent race conditions.
+</Note>
+
+See the complete signing utilities at `lib/utils/privySigningUtils.ts:1`.
+
+## Wallet connection flow
+
+<Steps>
+  <Step title="User initiates login">
+    User clicks the login button, triggering the Privy modal.
+  </Step>
+  
+  <Step title="Choose authentication method">
+    User selects email, passkey, or wallet connection.
+  </Step>
+  
+  <Step title="Embedded wallet creation">
+    Privy automatically creates an embedded wallet if the user doesn't have one.
+  </Step>
+  
+  <Step title="Fetch predicted address">
+    The application calls the OneBalance API to get the predicted account address.
+  </Step>
+  
+  <Step title="Load balances">
+    Fetch aggregated balances for the predicted address across all supported chains.
+  </Step>
+</Steps>
+
+## Integration example
+
+Here's a complete example combining Privy authentication with OneBalance quotes:
+
+```typescript
+import { usePrivy } from '@privy-io/react-auth';
+import { useEmbeddedWallet } from '@/lib/hooks';
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+import { useQuotes } from '@/lib/hooks';
+import { signQuote } from '@/lib/utils/privySigningUtils';
+
+function SwapComponent() {
+  const { authenticated } = usePrivy();
+  const embeddedWallet = useEmbeddedWallet();
+  const { predictedAddress } = usePredictedAddress();
+  const { getQuote, executeQuote, quote, loading } = useQuotes();
+
+  const handleSwap = async () => {
+    if (!authenticated || !embeddedWallet || !predictedAddress) {
+      console.error('Not authenticated');
+      return;
+    }
+
+    // Request quote
+    await getQuote({
+      fromTokenAmount: '1000000',
+      fromAggregatedAssetId: 'ob:usdc',
+      toAggregatedAssetId: 'ob:eth',
+    });
+
+    // Execute (signs automatically in useQuotes hook)
+    await executeQuote();
+  };
+
+  return (
+    <button onClick={handleSwap} disabled={loading || !authenticated}>
+      {loading ? 'Processing...' : 'Swap Tokens'}
+    </button>
+  );
+}
+```
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Check ready state" icon="check-circle">
+    Always verify `ready` is `true` before rendering UI or calling Privy methods.
+  </Card>
+  
+  <Card title="Cache addresses" icon="database">
+    Store predicted addresses in context to avoid redundant API calls.
+  </Card>
+  
+  <Card title="Handle disconnection" icon="plug-circle-xmark">
+    Clear cached data when wallets disconnect or change.
+  </Card>
+  
+  <Card title="Sequential signing" icon="list-ol">
+    Sign operations sequentially to maintain proper nonce ordering.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Wallet not found
+
+If `useEmbeddedWallet` returns `null`:
+- Verify the user is authenticated
+- Check that `createOnLogin` is set to `'users-without-wallets'` or `'all-users'`
+- Ensure the Privy provider is properly configured
+
+### Signature failures
+
+If signing fails:
+- Confirm the wallet is connected and unlocked
+- Verify typed data structure matches EIP-712 format
+- Check browser console for detailed error messages
+
+### Address prediction errors
+
+If address prediction fails:
+- Ensure OneBalance API credentials are correct
+- Verify the wallet address is valid
+- Check network connectivity to the API
+
+## Next steps
+
+<Card title="API Reference" icon="book" href="/api/quotes">
+  Explore the complete OneBalance API reference documentation
+</Card>

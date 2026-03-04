@@ -1,0 +1,334 @@
+---
+title: "useChains"
+description: "React hook for fetching supported blockchain networks and chain metadata"
+---
+
+## Overview
+
+The `useChains` hook fetches the list of supported blockchain networks (chains) and provides utilities for working with chain metadata. It automatically loads chains when the component mounts.
+
+## Import
+
+```typescript
+import { useChains } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+const useChains: () => {
+  chains: Chain[];
+  loading: boolean;
+  error: string | null;
+  getChainName: (reference: string) => string;
+}
+```
+
+## Return Values
+
+<ResponseField name="chains" type="Chain[]">
+  Array of supported blockchain networks.
+  
+  <Expandable title="Chain Properties">
+    <ResponseField name="chain" type="ChainMetadata">
+      Chain identification metadata.
+      
+      <Expandable title="ChainMetadata Properties">
+        <ResponseField name="chain" type="string">
+          Chain identifier string.
+        </ResponseField>
+        
+        <ResponseField name="namespace" type="string">
+          Blockchain namespace (e.g., `"eip155"` for EVM chains).
+        </ResponseField>
+        
+        <ResponseField name="reference" type="string">
+          Chain reference ID (e.g., `"1"` for Ethereum Mainnet, `"137"` for Polygon).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="isTestnet" type="boolean">
+      Indicates whether this is a testnet or mainnet chain.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="loading" type="boolean">
+  Indicates if chains are currently being fetched. `true` on initial load, `false` after data is loaded or error occurs.
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if chain fetching fails. `null` when no errors.
+</ResponseField>
+
+<ResponseField name="getChainName" type="(reference: string) => string">
+  Utility function to get a human-readable chain name from a chain reference ID.
+  
+  **Parameters:**
+  - `reference` (string): Chain reference ID (e.g., `"1"`, `"137"`, `"8453"`)
+  
+  **Returns:**
+  - Human-readable chain name (e.g., `"Ethereum Mainnet"`, `"Polygon"`, `"Base"`)
+  - Falls back to `"Chain {reference}"` if name is not found
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import { useChains } from '@/lib/hooks';
+
+function ChainList() {
+  const { chains, loading, error } = useChains();
+
+  if (loading) return <div>Loading chains...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <ul>
+      {chains.map(chain => (
+        <li key={chain.chain.reference}>
+          {chain.chain.reference} - {chain.isTestnet ? 'Testnet' : 'Mainnet'}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Chain Selector Component
+
+```typescript
+import { useChains } from '@/lib/hooks';
+import { useState } from 'react';
+
+function ChainSelector() {
+  const { chains, loading, getChainName } = useChains();
+  const [selectedChain, setSelectedChain] = useState('');
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <label>Select Chain</label>
+      <select
+        value={selectedChain}
+        onChange={(e) => setSelectedChain(e.target.value)}
+      >
+        <option value="">Select a chain</option>
+        {chains.map(chain => (
+          <option
+            key={chain.chain.reference}
+            value={chain.chain.reference}
+          >
+            {getChainName(chain.chain.reference)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+```
+
+### Display Chain with Logo
+
+```typescript
+import { useChains } from '@/lib/hooks';
+import Image from 'next/image';
+
+function ChainDisplay({ chainReference }: { chainReference: string }) {
+  const { getChainName } = useChains();
+
+  return (
+    <div className="flex items-center gap-2">
+      <Image
+        src={`https://storage.googleapis.com/tenderly-public-assets/networks/${chainReference}.svg`}
+        alt={getChainName(chainReference)}
+        width={24}
+        height={24}
+      />
+      <span>{getChainName(chainReference)}</span>
+    </div>
+  );
+}
+```
+
+### Filter Mainnets Only
+
+```typescript
+import { useChains } from '@/lib/hooks';
+import { useMemo } from 'react';
+
+function MainnetChains() {
+  const { chains, loading } = useChains();
+
+  const mainnets = useMemo(() => {
+    return chains.filter(chain => !chain.isTestnet);
+  }, [chains]);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h2>Mainnet Chains ({mainnets.length})</h2>
+      <ul>
+        {mainnets.map(chain => (
+          <li key={chain.chain.reference}>
+            {chain.chain.reference}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Chain Select with Icons
+
+```typescript
+import { useChains } from '@/lib/hooks';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import Image from 'next/image';
+import { CHAIN_NAMES } from '@/lib/types/chains';
+
+function ChainSelect({ value, onValueChange }: {
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const { chains, loading } = useChains();
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select chain" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Networks</SelectLabel>
+          {chains.map(chain => (
+            <SelectItem
+              key={chain.chain.reference}
+              value={chain.chain.reference}
+            >
+              <div className="flex items-center gap-2">
+                <Image
+                  src={`https://storage.googleapis.com/tenderly-public-assets/networks/${chain.chain.reference}.svg`}
+                  alt={chain.chain.reference}
+                  width={16}
+                  height={16}
+                />
+                <span>{CHAIN_NAMES[chain.chain.reference] ?? 'Unknown Chain'}</span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+```
+
+### Get Chain Info by Reference
+
+```typescript
+import { useChains } from '@/lib/hooks';
+
+function ChainInfo({ reference }: { reference: string }) {
+  const { chains, getChainName, loading } = useChains();
+
+  const chain = chains.find(c => c.chain.reference === reference);
+
+  if (loading) return <div>Loading...</div>;
+  if (!chain) return <div>Chain not found</div>;
+
+  return (
+    <div>
+      <h2>{getChainName(reference)}</h2>
+      <dl>
+        <dt>Reference:</dt>
+        <dd>{chain.chain.reference}</dd>
+        
+        <dt>Namespace:</dt>
+        <dd>{chain.chain.namespace}</dd>
+        
+        <dt>Type:</dt>
+        <dd>{chain.isTestnet ? 'Testnet' : 'Mainnet'}</dd>
+      </dl>
+    </div>
+  );
+}
+```
+
+## Types
+
+### Chain
+
+```typescript
+interface Chain {
+  chain: ChainMetadata;
+  isTestnet: boolean;
+}
+```
+
+### ChainMetadata
+
+```typescript
+interface ChainMetadata {
+  chain: string;
+  namespace: string;
+  reference: string;
+}
+```
+
+## Chain Name Mapping
+
+The hook includes a `CHAIN_NAMES` mapping for common chains:
+
+```typescript
+const CHAIN_NAMES: Record<string, string> = {
+  '1': 'Ethereum Mainnet',
+  '10': 'Optimism',
+  '137': 'Polygon',
+  '8453': 'Base',
+  '59144': 'Linea',
+  '42161': 'Arbitrum',
+  '43114': 'Avalanche',
+  '130': 'Unichain',
+  '999': 'HyperEVM',
+  '1329': 'Sei',
+  '792703809': 'Solana',
+  // ... more chains
+};
+```
+
+## Notes
+
+- Chains are fetched automatically when the component mounts
+- The hook only fetches chains once per mount (no automatic refetching)
+- Chain reference IDs are strings (e.g., `"1"`, `"137"`, `"8453"`)
+- For EVM chains, the namespace is typically `"eip155"`
+- Solana uses a different namespace and reference format
+- Chain logos are available at: `https://storage.googleapis.com/tenderly-public-assets/networks/{reference}.svg`
+
+## Related Hooks
+
+- [useAssets](/api/hooks/use-assets) - Get available assets
+- [useBalances](/api/hooks/use-balances) - Fetch user balances across chains
+- [useQuotes](/api/hooks/use-quotes) - Get swap quotes
+
+## See Also
+
+- [Chains API](/api/chains) - Backend API endpoint
+- [Chain Types](/api/types/chains) - Chain type definitions and utilities

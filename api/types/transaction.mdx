@@ -1,0 +1,362 @@
+---
+title: Transaction Types
+description: Type definitions for transaction tracking and history in OneBalance
+---
+
+## Overview
+
+The Transaction types define the structure for tracking swap and transfer operations, including their status, chain operations, and historical data.
+
+## Transaction
+
+Represents a complete transaction record for a swap or transfer operation.
+
+```typescript
+export interface Transaction {
+  quoteId: string;
+  status: TransactionStatus;
+  user: string;
+  recipientAccountId?: string;
+  originChainOperations: ChainOperation[];
+  destinationChainOperations?: ChainOperation[];
+  type: 'SWAP' | 'TRANSFER';
+  originToken: TokenInfo;
+  destinationToken?: TokenInfo;
+  timestamp: string;
+}
+```
+
+### Properties
+
+<ResponseField name="quoteId" type="string" required>
+  Unique identifier for the quote that generated this transaction
+</ResponseField>
+
+<ResponseField name="status" type="TransactionStatus" required>
+  Current status of the transaction. See [TransactionStatus](#transactionstatus) below.
+</ResponseField>
+
+<ResponseField name="user" type="string" required>
+  The user address who initiated the transaction
+</ResponseField>
+
+<ResponseField name="recipientAccountId" type="string">
+  Optional recipient account identifier (CAIP format) for transfer operations
+</ResponseField>
+
+<ResponseField name="originChainOperations" type="ChainOperation[]" required>
+  Array of operations executed on origin chains. See [ChainOperation](#chainoperation) below.
+</ResponseField>
+
+<ResponseField name="destinationChainOperations" type="ChainOperation[]">
+  Optional array of operations executed on destination chain. See [ChainOperation](#chainoperation) below.
+</ResponseField>
+
+<ResponseField name="type" type="'SWAP' | 'TRANSFER'" required>
+  Type of transaction:
+  - `SWAP`: Token swap operation
+  - `TRANSFER`: Token transfer to another account
+</ResponseField>
+
+<ResponseField name="originToken" type="TokenInfo" required>
+  Information about the source token. See [TokenInfo](#tokeninfo) below.
+</ResponseField>
+
+<ResponseField name="destinationToken" type="TokenInfo">
+  Optional information about the destination token (required for swaps). See [TokenInfo](#tokeninfo) below.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp when the transaction was created
+</ResponseField>
+
+### Example
+
+```typescript
+const transaction: Transaction = {
+  quoteId: "quote_123abc",
+  status: "COMPLETED",
+  user: "0x1234567890abcdef",
+  recipientAccountId: "eip155:137:0x9876543210fedcba",
+  originChainOperations: [
+    {
+      hash: "0xabcd1234...",
+      chainId: 1,
+      explorerUrl: "https://etherscan.io/tx/0xabcd1234..."
+    }
+  ],
+  destinationChainOperations: [
+    {
+      hash: "0xef567890...",
+      chainId: 137,
+      explorerUrl: "https://polygonscan.com/tx/0xef567890..."
+    }
+  ],
+  type: "SWAP",
+  originToken: {
+    aggregatedAssetId: "ob:usdc",
+    amount: "1000000000",
+    assetType: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    fiatValue: "1000.00"
+  },
+  destinationToken: {
+    aggregatedAssetId: "ob:eth",
+    amount: "285714285714285714",
+    assetType: "eip155:137/slip44:60",
+    fiatValue: "1000.00"
+  },
+  timestamp: "2026-03-04T10:30:00Z"
+};
+```
+
+---
+
+## TransactionStatus
+
+Enum type representing the possible states of a transaction.
+
+```typescript
+export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+```
+
+### Values
+
+<ResponseField name="PENDING" type="string">
+  Transaction has been created but execution has not completed
+</ResponseField>
+
+<ResponseField name="COMPLETED" type="string">
+  Transaction has been successfully executed on all required chains
+</ResponseField>
+
+<ResponseField name="FAILED" type="string">
+  Transaction execution failed
+</ResponseField>
+
+<ResponseField name="REFUNDED" type="string">
+  Failed transaction has been refunded to the user
+</ResponseField>
+
+---
+
+## ChainOperation
+
+Information about an operation executed on a specific blockchain.
+
+```typescript
+export interface ChainOperation {
+  hash: string;
+  chainId: number;
+  explorerUrl: string;
+}
+```
+
+### Properties
+
+<ResponseField name="hash" type="string" required>
+  Transaction hash on the blockchain
+</ResponseField>
+
+<ResponseField name="chainId" type="number" required>
+  Numeric chain identifier where the transaction was executed
+  
+  Common chain IDs:
+  - `1`: Ethereum Mainnet
+  - `10`: Optimism
+  - `137`: Polygon
+  - `8453`: Base
+  - `42161`: Arbitrum
+  - `43114`: Avalanche
+</ResponseField>
+
+<ResponseField name="explorerUrl" type="string" required>
+  Full URL to view the transaction on a block explorer
+</ResponseField>
+
+### Example
+
+```typescript
+const operation: ChainOperation = {
+  hash: "0x1234567890abcdef...",
+  chainId: 1,
+  explorerUrl: "https://etherscan.io/tx/0x1234567890abcdef..."
+};
+```
+
+---
+
+## TokenInfo
+
+Extended token information including fiat value calculations.
+
+```typescript
+export interface TokenInfo {
+  aggregatedAssetId: string;
+  amount: string;
+  assetType: string | string[];
+  fiatValue?: string | { assetType: string; fiatValue: string }[];
+  minimumAmount?: string;
+  minimumFiatValue?: string;
+}
+```
+
+### Properties
+
+<ResponseField name="aggregatedAssetId" type="string" required>
+  The OneBalance aggregated asset identifier (e.g., `ob:eth`, `ob:usdc`, `ob:dai`)
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Token amount as a string (represents BigInt with token's decimals)
+  
+  Example: `"1000000"` for 1 USDC (6 decimals)
+</ResponseField>
+
+<ResponseField name="assetType" type="string | string[]" required>
+  CAIP-19 format asset identifier(s)
+  
+  - Single string: Asset on one chain
+  - Array of strings: Aggregated asset across multiple chains
+  
+  Format: `{namespace}:{chainId}/{assetNamespace}:{assetReference}`
+  
+  Examples:
+  - `"eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"` (USDC on Ethereum)
+  - `"eip155:137/slip44:60"` (ETH on Polygon)
+</ResponseField>
+
+<ResponseField name="fiatValue" type="string | array">
+  Fiat value of the token amount
+  
+  - **String**: Total fiat value (e.g., `"1000.00"`)
+  - **Array**: Per-chain breakdown for aggregated assets
+    - Each object contains `assetType` and `fiatValue`
+</ResponseField>
+
+<ResponseField name="minimumAmount" type="string">
+  Minimum amount required for the operation (as string)
+</ResponseField>
+
+<ResponseField name="minimumFiatValue" type="string">
+  Minimum fiat value required for the operation
+</ResponseField>
+
+### Example - Simple Token
+
+```typescript
+const simpleToken: TokenInfo = {
+  aggregatedAssetId: "ob:usdc",
+  amount: "1000000000", // 1000 USDC
+  assetType: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  fiatValue: "1000.00"
+};
+```
+
+### Example - Aggregated Token
+
+```typescript
+const aggregatedToken: TokenInfo = {
+  aggregatedAssetId: "ob:usdc",
+  amount: "2000000000", // 2000 USDC total
+  assetType: [
+    "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+  ],
+  fiatValue: [
+    {
+      assetType: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      fiatValue: "1200.00"
+    },
+    {
+      assetType: "eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+      fiatValue: "800.00"
+    }
+  ],
+  minimumAmount: "100000", // 0.1 USDC
+  minimumFiatValue: "0.10"
+};
+```
+
+---
+
+## TransactionHistoryResponse
+
+Response structure for transaction history queries with pagination support.
+
+```typescript
+export interface TransactionHistoryResponse {
+  transactions: Transaction[];
+  continuation?: string;
+}
+```
+
+### Properties
+
+<ResponseField name="transactions" type="Transaction[]" required>
+  Array of transaction records. See [Transaction](#transaction) above.
+</ResponseField>
+
+<ResponseField name="continuation" type="string">
+  Pagination token to fetch the next page of results. If not present, there are no more results.
+</ResponseField>
+
+### Example
+
+```typescript
+const history: TransactionHistoryResponse = {
+  transactions: [
+    {
+      quoteId: "quote_123",
+      status: "COMPLETED",
+      user: "0x1234...",
+      type: "SWAP",
+      originToken: { /* ... */ },
+      destinationToken: { /* ... */ },
+      originChainOperations: [{ /* ... */ }],
+      timestamp: "2026-03-04T10:30:00Z"
+    },
+    // ... more transactions
+  ],
+  continuation: "eyJwYWdlIjoyLCJsaW1pdCI6MTB9" // Base64 encoded pagination token
+};
+```
+
+---
+
+## TransactionHistoryParams
+
+Parameters for querying transaction history.
+
+```typescript
+export interface TransactionHistoryParams {
+  user: string;
+  limit: number;
+  continuation?: string;
+}
+```
+
+### Properties
+
+<ResponseField name="user" type="string" required>
+  User address to query transactions for
+</ResponseField>
+
+<ResponseField name="limit" type="number" required>
+  Maximum number of transactions to return per page
+  
+  Recommended: 10-50 transactions per page
+</ResponseField>
+
+<ResponseField name="continuation" type="string">
+  Pagination token from a previous response to fetch the next page
+</ResponseField>
+
+### Example
+
+```typescript
+const params: TransactionHistoryParams = {
+  user: "0x1234567890abcdef",
+  limit: 20,
+  continuation: "eyJwYWdlIjoyLCJsaW1pdCI6MjB9"
+};
+```

@@ -1,0 +1,474 @@
+---
+title: 'Assets API'
+description: 'Retrieve information about supported aggregated assets'
+---
+
+## Overview
+
+The Assets API provides a list of all supported aggregated assets in the OneBalance system. Each aggregated asset represents a token type (like USDC or ETH) that exists across multiple chains, along with metadata about the individual chain-specific implementations.
+
+## API Methods
+
+### getAssets
+
+Retrieve the complete list of supported aggregated assets.
+
+```typescript
+assetsApi.getAssets(): Promise<Asset[]>
+```
+
+#### Parameters
+
+This method takes no parameters.
+
+#### Returns
+
+<ResponseField name="Asset[]" type="array">
+  Array of all supported aggregated assets
+  
+  <Expandable title="Asset Structure">
+    <ResponseField name="aggregatedAssetId" type="string">
+      Unique identifier for the aggregated asset (e.g., "ob:usdc", "ob:eth")
+      
+      Format: `ob:{symbol}` where symbol is lowercase
+    </ResponseField>
+    
+    <ResponseField name="symbol" type="string">
+      Human-readable token symbol (e.g., "USDC", "ETH")
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Full name of the asset (e.g., "USD Coin", "Ethereum")
+    </ResponseField>
+    
+    <ResponseField name="decimals" type="number">
+      Number of decimal places for the token (commonly 6 for USDC, 18 for ETH)
+    </ResponseField>
+    
+    <ResponseField name="aggregatedEntities" type="AggregatedAssetEntity[]">
+      Array of individual chain implementations of this asset
+      
+      <Expandable title="AggregatedAssetEntity properties">
+        <ResponseField name="assetType" type="string">
+          CAIP-19 identifier for this specific chain implementation
+          
+          Examples:
+          - `eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` (USDC on Ethereum)
+          - `eip155:1/slip44:60` (Native ETH on Ethereum)
+        </ResponseField>
+        
+        <ResponseField name="decimals" type="number">
+          Decimals for this specific implementation (may vary by chain)
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Name of the token on this specific chain
+        </ResponseField>
+        
+        <ResponseField name="symbol" type="string">
+          Symbol of the token on this specific chain
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Basic Usage
+import { assetsApi } from '@/lib/api/assets';
+
+const assets = await assetsApi.getAssets();
+
+console.log(`Found ${assets.length} supported assets`);
+
+// Display each asset
+assets.forEach(asset => {
+  console.log(`${asset.symbol} (${asset.name})`);
+  console.log(`  ID: ${asset.aggregatedAssetId}`);
+  console.log(`  Decimals: ${asset.decimals}`);
+  console.log(`  Available on ${asset.aggregatedEntities.length} chains`);
+});
+```
+
+```typescript Real Usage (from useAssets.ts:18)
+const data: Asset[] = await assetsApi.getAssets();
+```
+</CodeGroup>
+
+## Example Response
+
+<CodeGroup>
+```json Sample Assets Response
+[
+  {
+    "aggregatedAssetId": "ob:usdc",
+    "symbol": "USDC",
+    "name": "USD Coin",
+    "decimals": 6,
+    "aggregatedEntities": [
+      {
+        "assetType": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      {
+        "assetType": "eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      {
+        "assetType": "eip155:42161/erc20:0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      }
+    ]
+  },
+  {
+    "aggregatedAssetId": "ob:eth",
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "decimals": 18,
+    "aggregatedEntities": [
+      {
+        "assetType": "eip155:1/slip44:60",
+        "decimals": 18,
+        "name": "Ethereum",
+        "symbol": "ETH"
+      },
+      {
+        "assetType": "eip155:10/slip44:60",
+        "decimals": 18,
+        "name": "Ethereum",
+        "symbol": "ETH"
+      },
+      {
+        "assetType": "eip155:8453/slip44:60",
+        "decimals": 18,
+        "name": "Ethereum",
+        "symbol": "ETH"
+      }
+    ]
+  }
+]
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Building Asset Selectors
+
+<CodeGroup>
+```typescript Asset Selector Component
+import { assetsApi } from '@/lib/api/assets';
+import { useState, useEffect } from 'react';
+
+function AssetSelector({ onSelect }: { onSelect: (assetId: string) => void }) {
+  const [assets, setAssets] = useState<Asset[]>([]);
+  
+  useEffect(() => {
+    assetsApi.getAssets().then(setAssets);
+  }, []);
+  
+  return (
+    <select onChange={(e) => onSelect(e.target.value)}>
+      <option value="">Select an asset...</option>
+      {assets.map(asset => (
+        <option key={asset.aggregatedAssetId} value={asset.aggregatedAssetId}>
+          {asset.symbol} - {asset.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+</CodeGroup>
+
+### Finding Asset Details
+
+<CodeGroup>
+```typescript Get Asset by ID
+function findAsset(assets: Asset[], assetId: string): Asset | undefined {
+  return assets.find(asset => asset.aggregatedAssetId === assetId);
+}
+
+const assets = await assetsApi.getAssets();
+const usdc = findAsset(assets, 'ob:usdc');
+
+if (usdc) {
+  console.log(`${usdc.name} is available on ${usdc.aggregatedEntities.length} chains`);
+}
+```
+
+```typescript Get Asset Decimals
+function getAssetDecimals(assets: Asset[], assetId: string): number {
+  const asset = assets.find(a => a.aggregatedAssetId === assetId);
+  return asset?.decimals || 18; // Default to 18 if not found
+}
+
+const decimals = getAssetDecimals(assets, 'ob:usdc');
+// Returns: 6
+```
+</CodeGroup>
+
+### Checking Chain Support
+
+<CodeGroup>
+```typescript Check if Asset Exists on Chain
+import { extractChainIdFromAssetType } from '@/lib/types/chains';
+
+function isAssetOnChain(
+  asset: Asset,
+  chainId: string | number
+): boolean {
+  const targetChainId = chainId.toString();
+  
+  return asset.aggregatedEntities.some(entity => {
+    const entityChainId = extractChainIdFromAssetType(entity.assetType);
+    return entityChainId === targetChainId;
+  });
+}
+
+const assets = await assetsApi.getAssets();
+const usdc = assets.find(a => a.aggregatedAssetId === 'ob:usdc');
+
+if (usdc) {
+  console.log('USDC on Ethereum?', isAssetOnChain(usdc, '1')); // true
+  console.log('USDC on Polygon?', isAssetOnChain(usdc, '137')); // true
+  console.log('USDC on Unknown?', isAssetOnChain(usdc, '99999')); // false
+}
+```
+
+```typescript Get Chains for Asset
+function getChainsForAsset(asset: Asset): string[] {
+  return asset.aggregatedEntities.map(entity =>
+    extractChainIdFromAssetType(entity.assetType)
+  );
+}
+
+const chains = getChainsForAsset(usdc);
+console.log('USDC available on chains:', chains);
+// Output: ['1', '137', '42161', '10', ...]
+```
+</CodeGroup>
+
+### Formatting Asset Amounts
+
+<CodeGroup>
+```typescript Format Asset Amount
+import { formatUnits, parseUnits } from 'viem';
+
+function formatAssetAmount(
+  amount: string,
+  asset: Asset
+): string {
+  const formatted = formatUnits(BigInt(amount), asset.decimals);
+  return `${parseFloat(formatted).toFixed(asset.decimals === 6 ? 2 : 4)} ${asset.symbol}`;
+}
+
+const assets = await assetsApi.getAssets();
+const usdc = assets.find(a => a.aggregatedAssetId === 'ob:usdc');
+
+if (usdc) {
+  console.log(formatAssetAmount('1000000', usdc));
+  // Output: "1.00 USDC"
+}
+```
+
+```typescript Parse User Input
+function parseAssetInput(
+  input: string,
+  asset: Asset
+): string {
+  // Convert user input (e.g., "100.5") to base units
+  return parseUnits(input, asset.decimals).toString();
+}
+
+const baseUnits = parseAssetInput('100.5', usdc);
+console.log(baseUnits);
+// Output: "100500000"
+```
+</CodeGroup>
+
+## Real-World Implementation
+
+<CodeGroup>
+```typescript useAssets Hook (lines 16-29)
+const fetchAssets = async () => {
+  try {
+    const data: Asset[] = await assetsApi.getAssets();
+    setAssets(data);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  fetchAssets();
+}, []);
+```
+</CodeGroup>
+
+## Asset ID Format
+
+OneBalance uses a consistent format for aggregated asset IDs:
+
+```
+ob:{symbol}
+```
+
+Where:
+- `ob` is the OneBalance prefix
+- `{symbol}` is the lowercase token symbol
+
+<CodeGroup>
+```text Examples
+ob:usdc   → USD Coin
+ob:eth    → Ethereum
+ob:usdt   → Tether USD
+ob:dai    → Dai Stablecoin
+ob:wbtc   → Wrapped Bitcoin
+```
+</CodeGroup>
+
+## Caching Strategy
+
+<Tip>
+Asset lists change infrequently. Consider caching the response to improve performance.
+</Tip>
+
+<CodeGroup>
+```typescript Simple Cache
+let cachedAssets: Asset[] | null = null;
+let cacheTime: number | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getAssetsWithCache(): Promise<Asset[]> {
+  const now = Date.now();
+  
+  if (cachedAssets && cacheTime && (now - cacheTime) < CACHE_DURATION) {
+    return cachedAssets;
+  }
+  
+  cachedAssets = await assetsApi.getAssets();
+  cacheTime = now;
+  
+  return cachedAssets;
+}
+```
+
+```typescript LocalStorage Cache
+function getCachedAssets(): Asset[] | null {
+  const cached = localStorage.getItem('onebalance_assets');
+  if (!cached) return null;
+  
+  const { assets, timestamp } = JSON.parse(cached);
+  const isExpired = Date.now() - timestamp > 5 * 60 * 1000;
+  
+  return isExpired ? null : assets;
+}
+
+function setCachedAssets(assets: Asset[]): void {
+  localStorage.setItem('onebalance_assets', JSON.stringify({
+    assets,
+    timestamp: Date.now()
+  }));
+}
+
+async function getAssets(): Promise<Asset[]> {
+  const cached = getCachedAssets();
+  if (cached) return cached;
+  
+  const assets = await assetsApi.getAssets();
+  setCachedAssets(assets);
+  return assets;
+}
+```
+</CodeGroup>
+
+## Filtering Assets
+
+<CodeGroup>
+```typescript Filter Stablecoins
+const stablecoins = assets.filter(asset => 
+  ['USDC', 'USDT', 'DAI', 'BUSD'].includes(asset.symbol)
+);
+```
+
+```typescript Search Assets
+function searchAssets(assets: Asset[], query: string): Asset[] {
+  const lowerQuery = query.toLowerCase();
+  
+  return assets.filter(asset =>
+    asset.symbol.toLowerCase().includes(lowerQuery) ||
+    asset.name.toLowerCase().includes(lowerQuery) ||
+    asset.aggregatedAssetId.toLowerCase().includes(lowerQuery)
+  );
+}
+
+const results = searchAssets(assets, 'coin');
+// Returns: USDC, etc.
+```
+</CodeGroup>
+
+## Error Handling
+
+<CodeGroup>
+```typescript Error Handling
+try {
+  const assets = await assetsApi.getAssets();
+  return assets;
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed to fetch assets:', error.message);
+    
+    // Provide fallback or retry logic
+    if (error.message.includes('network')) {
+      // Retry after delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return assetsApi.getAssets();
+    }
+  }
+  
+  // Return empty array as fallback
+  return [];
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Cache Responses" icon="database">
+    Assets change rarely - cache for 5-10 minutes to reduce API calls
+  </Card>
+  
+  <Card title="Load on Startup" icon="bolt">
+    Fetch assets early in app lifecycle for immediate availability
+  </Card>
+  
+  <Card title="Validate Asset IDs" icon="shield-check">
+    Always validate user-provided asset IDs against the supported list
+  </Card>
+  
+  <Card title="Show Metadata" icon="circle-info">
+    Display asset names and symbols for better UX
+  </Card>
+</CardGroup>
+
+## Related APIs
+
+- [Balances API](/api/balances) - Uses asset decimals for formatting
+- [Quotes API](/api/quotes) - Uses aggregated asset IDs
+- [Chains API](/api/chains) - For chain metadata in aggregatedEntities
+
+## Related Types
+
+- [Asset](/api/types/assets#asset) - Complete asset structure
+- [AggregatedAssetEntity](/api/types/assets#aggregatedassetentity) - Chain-specific asset details

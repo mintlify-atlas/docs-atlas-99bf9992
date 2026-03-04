@@ -1,0 +1,435 @@
+---
+title: Chain Types
+description: Type definitions for blockchain network information and utilities
+---
+
+## Overview
+
+The Chain types define structures for representing blockchain networks, their metadata, and provide utility functions for working with chain identifiers.
+
+## Chain
+
+Represents a blockchain network with its metadata and testnet status.
+
+```typescript
+export interface Chain {
+  chain: ChainMetadata;
+  isTestnet: boolean;
+}
+```
+
+### Properties
+
+<ResponseField name="chain" type="ChainMetadata" required>
+  Metadata about the blockchain. See [ChainMetadata](#chainmetadata) below.
+</ResponseField>
+
+<ResponseField name="isTestnet" type="boolean" required>
+  Indicates whether this is a testnet or mainnet chain
+  
+  - `true`: Testnet (e.g., Sepolia, Mumbai)
+  - `false`: Mainnet (e.g., Ethereum, Polygon)
+</ResponseField>
+
+### Example
+
+```typescript
+const ethereumMainnet: Chain = {
+  chain: {
+    chain: "mainnet",
+    namespace: "eip155",
+    reference: "1"
+  },
+  isTestnet: false
+};
+
+const polygonMumbai: Chain = {
+  chain: {
+    chain: "mumbai",
+    namespace: "eip155",
+    reference: "80001"
+  },
+  isTestnet: true
+};
+```
+
+---
+
+## ChainMetadata
+
+Detailed metadata about a blockchain using CAIP-2 format.
+
+```typescript
+export interface ChainMetadata {
+  chain: string;
+  namespace: string;
+  reference: string;
+}
+```
+
+### Properties
+
+<ResponseField name="chain" type="string" required>
+  Human-readable chain name or identifier
+  
+  Examples: `"mainnet"`, `"polygon"`, `"optimism"`, `"arbitrum"`
+</ResponseField>
+
+<ResponseField name="namespace" type="string" required>
+  Blockchain ecosystem namespace following CAIP-2 standard
+  
+  Common values:
+  - `"eip155"` - Ethereum and EVM-compatible chains
+  - `"solana"` - Solana blockchain
+  - `"cosmos"` - Cosmos-based chains
+</ResponseField>
+
+<ResponseField name="reference" type="string" required>
+  Chain-specific identifier within the namespace
+  
+  For EIP-155 chains, this is the chain ID:
+  - `"1"` - Ethereum Mainnet
+  - `"137"` - Polygon
+  - `"8453"` - Base
+  - `"42161"` - Arbitrum
+</ResponseField>
+
+### Example
+
+```typescript
+const baseMetadata: ChainMetadata = {
+  chain: "base",
+  namespace: "eip155",
+  reference: "8453"
+};
+```
+
+---
+
+## ChainConfig
+
+Configuration for displaying chain information in user interfaces.
+
+```typescript
+export interface ChainConfig {
+  name: string;
+  logoUrl: string;
+}
+```
+
+### Properties
+
+<ResponseField name="name" type="string" required>
+  Human-friendly display name for the chain
+  
+  Examples: `"Ethereum Mainnet"`, `"Polygon"`, `"Base"`, `"Optimism"`
+</ResponseField>
+
+<ResponseField name="logoUrl" type="string" required>
+  URL to the chain's logo image (SVG or PNG)
+</ResponseField>
+
+### Example
+
+```typescript
+const optimismConfig: ChainConfig = {
+  name: "Optimism",
+  logoUrl: "https://storage.googleapis.com/onebalance-public-assets/networks/10.svg"
+};
+```
+
+---
+
+## CHAIN_CONFIG
+
+Pre-configured chain information for all supported networks.
+
+```typescript
+export const CHAIN_CONFIG: Record<string, ChainConfig> = {
+  '1': {
+    name: 'Ethereum Mainnet',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/1.svg',
+  },
+  '10': {
+    name: 'Optimism',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/10.svg',
+  },
+  '137': {
+    name: 'Polygon',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/137.svg',
+  },
+  '8453': {
+    name: 'Base',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/8453.svg',
+  },
+  // ... more chains
+};
+```
+
+### Supported Chains
+
+<Tabs>
+  <Tab title="Ethereum & L2s">
+    | Chain ID | Name | Logo URL |
+    |----------|------|----------|
+    | `1` | Ethereum Mainnet | [View](https://storage.googleapis.com/onebalance-public-assets/networks/1.svg) |
+    | `10` | Optimism | [View](https://storage.googleapis.com/onebalance-public-assets/networks/10.svg) |
+    | `8453` | Base | [View](https://storage.googleapis.com/onebalance-public-assets/networks/8453.svg) |
+    | `42161` | Arbitrum | [View](https://storage.googleapis.com/onebalance-public-assets/networks/42161.svg) |
+    | `59144` | Linea | [View](https://storage.googleapis.com/onebalance-public-assets/networks/59144.svg) |
+    | `130` | Unichain | [View](https://storage.googleapis.com/onebalance-public-assets/networks/130.svg) |
+  </Tab>
+  
+  <Tab title="Other EVM Chains">
+    | Chain ID | Name | Logo URL |
+    |----------|------|----------|
+    | `137` | Polygon | [View](https://storage.googleapis.com/onebalance-public-assets/networks/137.svg) |
+    | `43114` | Avalanche | [View](https://storage.googleapis.com/onebalance-public-assets/networks/43114.svg) |
+    | `999` | HyperEVM | [View](https://storage.googleapis.com/onebalance-public-assets/networks/999.svg) |
+    | `1329` | Sei | [View](https://assets.coingecko.com/coins/images/28205/large/Sei_Logo_-_Transparent.png) |
+  </Tab>
+  
+  <Tab title="Non-EVM Chains">
+    | Chain ID | Name | Logo URL |
+    |----------|------|----------|
+    | `792703809` | Solana | [View](https://storage.googleapis.com/onebalance-public-assets/networks/solana.svg) |
+    | `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana (alt) | [View](https://storage.googleapis.com/onebalance-public-assets/networks/solana.svg) |
+  </Tab>
+</Tabs>
+
+---
+
+## Utility Functions
+
+Helper functions for working with chain identifiers.
+
+### getChainName
+
+Retrieve the display name for a chain by its ID.
+
+```typescript
+export const getChainName = (chainId: string | number): string
+```
+
+<ParamField path="chainId" type="string | number" required>
+  The chain ID (numeric or string)
+</ParamField>
+
+**Returns:** The chain's display name, or `"Chain {id}"` if not found
+
+**Example:**
+```typescript
+getChainName(1);        // "Ethereum Mainnet"
+getChainName("137");    // "Polygon"
+getChainName(99999);    // "Chain 99999"
+```
+
+---
+
+### getChainLogoUrl
+
+Retrieve the logo URL for a chain by its ID.
+
+```typescript
+export const getChainLogoUrl = (chainId: string | number): string
+```
+
+<ParamField path="chainId" type="string | number" required>
+  The chain ID (numeric or string)
+</ParamField>
+
+**Returns:** The chain's logo URL, or an empty string if not found
+
+**Example:**
+```typescript
+getChainLogoUrl(1);
+// "https://storage.googleapis.com/onebalance-public-assets/networks/1.svg"
+
+getChainLogoUrl(8453);
+// "https://storage.googleapis.com/onebalance-public-assets/networks/8453.svg"
+
+getChainLogoUrl(99999);
+// ""
+```
+
+---
+
+### getChainConfig
+
+Retrieve the complete configuration for a chain by its ID.
+
+```typescript
+export const getChainConfig = (chainId: string | number): ChainConfig | null
+```
+
+<ParamField path="chainId" type="string | number" required>
+  The chain ID (numeric or string)
+</ParamField>
+
+**Returns:** The [ChainConfig](#chainconfig) object, or `null` if not found
+
+**Example:**
+```typescript
+const config = getChainConfig(10);
+if (config) {
+  console.log(config.name);     // "Optimism"
+  console.log(config.logoUrl);  // "https://..."
+}
+```
+
+---
+
+### extractChainIdFromCAIP
+
+Extract the chain ID from a CAIP chain identifier.
+
+```typescript
+export const extractChainIdFromCAIP = (caipChainId: string): string
+```
+
+<ParamField path="caipChainId" type="string" required>
+  CAIP-2 format chain identifier (e.g., `"eip155:1"`, `"eip155:137"`)
+</ParamField>
+
+**Returns:** The extracted chain ID
+
+**Example:**
+```typescript
+extractChainIdFromCAIP("eip155:1");      // "1"
+extractChainIdFromCAIP("eip155:137");    // "137"
+extractChainIdFromCAIP("solana:mainnet"); // "mainnet"
+```
+
+---
+
+### extractChainIdFromAssetType
+
+Extract the chain ID from a CAIP-19 asset type identifier.
+
+```typescript
+export const extractChainIdFromAssetType = (assetType: string): string
+```
+
+<ParamField path="assetType" type="string" required>
+  CAIP-19 format asset identifier (e.g., `"eip155:1/erc20:0x..."`, `"eip155:137/slip44:60"`)
+</ParamField>
+
+**Returns:** The extracted chain ID
+
+**Example:**
+```typescript
+extractChainIdFromAssetType("eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+// "1"
+
+extractChainIdFromAssetType("eip155:137/slip44:60");
+// "137"
+
+extractChainIdFromAssetType("eip155:8453/erc20:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+// "8453"
+```
+
+---
+
+## Usage Examples
+
+### Display Chain Information in UI
+
+```typescript
+import { getChainConfig, extractChainIdFromAssetType } from './types/chains';
+
+function ChainBadge({ assetType }: { assetType: string }) {
+  const chainId = extractChainIdFromAssetType(assetType);
+  const config = getChainConfig(chainId);
+  
+  if (!config) {
+    return <span>Unknown Chain</span>;
+  }
+  
+  return (
+    <div className="chain-badge">
+      <img src={config.logoUrl} alt={config.name} width={20} height={20} />
+      <span>{config.name}</span>
+    </div>
+  );
+}
+
+// Usage:
+<ChainBadge assetType="eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" />
+// Renders: [Ethereum Logo] Ethereum Mainnet
+```
+
+### Group Assets by Chain
+
+```typescript
+import { extractChainIdFromAssetType, getChainName } from './types/chains';
+import { IndividualAssetBalance } from './types/balances';
+
+function groupAssetsByChain(assets: IndividualAssetBalance[]) {
+  const grouped = new Map<string, IndividualAssetBalance[]>();
+  
+  for (const asset of assets) {
+    const chainId = extractChainIdFromAssetType(asset.assetType);
+    const chainName = getChainName(chainId);
+    
+    if (!grouped.has(chainName)) {
+      grouped.set(chainName, []);
+    }
+    grouped.get(chainName)!.push(asset);
+  }
+  
+  return grouped;
+}
+
+// Usage:
+const grouped = groupAssetsByChain(individualBalances);
+for (const [chainName, assets] of grouped) {
+  console.log(`${chainName}: ${assets.length} assets`);
+}
+```
+
+### Validate Chain Support
+
+```typescript
+import { CHAIN_CONFIG } from './types/chains';
+
+function isSupportedChain(chainId: string | number): boolean {
+  return chainId.toString() in CHAIN_CONFIG;
+}
+
+function getSupportedChainIds(): string[] {
+  return Object.keys(CHAIN_CONFIG);
+}
+
+// Usage:
+console.log(isSupportedChain(1));      // true
+console.log(isSupportedChain(99999));  // false
+
+const supportedChains = getSupportedChainIds();
+console.log(`Supported chains: ${supportedChains.join(', ')}`);
+// Supported chains: 1, 10, 137, 8453, 59144, 42161, 43114, 130, 999, 1329, 792703809, 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+```
+
+### Create Chain Selector Component
+
+```typescript
+import { CHAIN_CONFIG, ChainConfig } from './types/chains';
+
+function ChainSelector({ 
+  onSelect 
+}: { 
+  onSelect: (chainId: string) => void 
+}) {
+  const chains = Object.entries(CHAIN_CONFIG);
+  
+  return (
+    <select onChange={(e) => onSelect(e.target.value)}>
+      <option value="">Select a chain</option>
+      {chains.map(([chainId, config]) => (
+        <option key={chainId} value={chainId}>
+          {config.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+```

@@ -1,0 +1,428 @@
+---
+title: OneBalance API
+description: Integrate the OneBalance API for chain-abstracted swaps, transfers, and balance tracking across multiple blockchains
+---
+
+The OneBalance API provides chain abstraction capabilities that enable seamless token swaps and transfers across multiple blockchains without requiring users to switch networks or hold native gas tokens.
+
+## API client setup
+
+The application uses an Axios-based API client configured to proxy requests through Next.js API routes:
+
+```typescript lib/api.ts
+import axios from 'axios';
+
+export const apiClient = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+```
+
+This client is used by all API modules to make authenticated requests to the OneBalance backend.
+
+## API modules
+
+The API is organized into specialized modules, each handling a specific domain:
+
+### Quotes API
+
+Handle quote generation and execution for swaps and transfers.
+
+```typescript lib/api/quotes.ts
+import { apiClient } from '@/lib/api';
+import type { QuoteRequest, Quote, QuoteStatus } from '@/lib/types/quote';
+
+export const quotesApi = {
+  getQuote: async (request: QuoteRequest): Promise<Quote> => {
+    const response = await apiClient.post('/v1/quote', request);
+    return response.data;
+  },
+
+  executeQuote: async (quote: Quote): Promise<any> => {
+    const response = await apiClient.post('/quotes/execute-quote', quote);
+    return response.data;
+  },
+
+  getQuoteStatus: async (quoteId: string): Promise<QuoteStatus> => {
+    const response = await apiClient.get(`/status/get-execution-status?quoteId=${quoteId}`);
+    return response.data;
+  },
+};
+```
+
+**Key endpoints**:
+- `POST /v1/quote` - Request a quote for a swap or transfer
+- `POST /quotes/execute-quote` - Execute a signed quote
+- `GET /status/get-execution-status` - Check quote execution status
+
+### Assets API
+
+Retrieve information about supported aggregated assets.
+
+```typescript lib/api/assets.ts
+import { apiClient } from '@/lib/api';
+import { Asset } from '@/lib/types/assets';
+
+export const assetsApi = {
+  getAssets: async (): Promise<Asset[]> => {
+    const response = await apiClient.get('/assets/list');
+    return response.data;
+  },
+};
+```
+
+**Endpoint**:
+- `GET /assets/list` - Get all supported aggregated assets
+
+### Balances API
+
+Track aggregated balances across multiple chains.
+
+```typescript lib/api/balances.ts
+import { apiClient } from '@/lib/api';
+import { BalancesResponse } from '@/lib/types/balances';
+
+export const balancesApi = {
+  getAggregatedBalance: async (address: string): Promise<BalancesResponse> => {
+    const response = await apiClient.get(`/v2/balances/aggregated-balance?address=${address}`);
+    return response.data;
+  },
+};
+```
+
+**Endpoint**:
+- `GET /v2/balances/aggregated-balance` - Get aggregated balance for an address
+
+### Chains API
+
+Get information about supported blockchain networks.
+
+```typescript lib/api/chains.ts
+import { apiClient } from '@/lib/api';
+import { Chain } from '@/lib/types/chains';
+
+export const chainsApi = {
+  getChains: async (): Promise<Chain[]> => {
+    const response = await apiClient.get('/chains/supported-list');
+    return response.data;
+  },
+};
+```
+
+**Endpoint**:
+- `GET /chains/supported-list` - Get all supported chains
+
+### Account API
+
+Manage account information and address prediction.
+
+```typescript lib/api/account.ts
+import { apiClient } from '@/lib/api';
+
+export const accountApi = {
+  predictAddress: async (sessionAddress: string, adminAddress: string): Promise<string> => {
+    const response = await apiClient.post('/account/predict-address', {
+      sessionAddress,
+      adminAddress,
+    });
+    return response.data?.predictedAddress;
+  },
+};
+```
+
+**Endpoint**:
+- `POST /account/predict-address` - Get predicted account address
+
+### Transactions API
+
+Retrieve transaction history and status.
+
+```typescript lib/api/transactions.ts
+import { apiClient } from '@/lib/api';
+import { TransactionHistoryResponse, TransactionHistoryParams } from '@/lib/types/transaction';
+
+export const transactionsApi = {
+  getTransactionHistory: async (
+    params: TransactionHistoryParams
+  ): Promise<TransactionHistoryResponse> => {
+    const queryParams = new URLSearchParams({
+      user: params.user,
+      limit: params.limit.toString(),
+    });
+
+    if (params.continuation) {
+      queryParams.append('continuation', params.continuation);
+    }
+
+    const response = await apiClient.get(`/status/get-tx-history?${queryParams.toString()}`);
+    return response.data;
+  },
+};
+```
+
+**Endpoint**:
+- `GET /status/get-tx-history` - Get paginated transaction history
+
+## Quote workflow
+
+The quote workflow is the core of the chain abstraction experience:
+
+<Steps>
+  <Step title="Request a quote">
+    Submit a quote request with source and destination assets
+    
+    ```typescript
+    const quoteRequest: QuoteRequest = {
+      from: {
+        account: {
+          sessionAddress: wallet.address,
+          adminAddress: wallet.address,
+          accountAddress: predictedAddress,
+        },
+        asset: {
+          assetId: 'ob:usdc',
+        },
+        amount: '1000000', // 1 USDC (6 decimals)
+      },
+      to: {
+        asset: {
+          assetId: 'ob:eth',
+        },
+      },
+    };
+    
+    const quote = await quotesApi.getQuote(quoteRequest);
+    ```
+  </Step>
+  
+  <Step title="Sign the quote">
+    Sign chain operations using the user's wallet
+    
+    ```typescript
+    const signedQuote = await signQuote(quote, embeddedWallet);
+    ```
+  </Step>
+  
+  <Step title="Execute the quote">
+    Submit the signed quote for execution
+    
+    ```typescript
+    await quotesApi.executeQuote(signedQuote);
+    ```
+  </Step>
+  
+  <Step title="Poll for status">
+    Monitor execution status until completion
+    
+    ```typescript
+    const status = await quotesApi.getQuoteStatus(quote.id);
+    // Poll every 1-2 seconds until status is COMPLETED or FAILED
+    ```
+  </Step>
+</Steps>
+
+## Quote types
+
+### Quote request structure
+
+```typescript lib/types/quote.ts
+export interface QuoteRequest {
+  from: {
+    account: {
+      sessionAddress: string;    // Wallet address for signing
+      adminAddress: string;       // Admin wallet address
+      accountAddress: string;     // Predicted OneBalance account
+    };
+    asset: {
+      assetId: string;           // Aggregated asset ID (e.g., 'ob:usdc')
+    };
+    amount: string;              // Amount in smallest unit
+  };
+  to: {
+    asset: {
+      assetId: string;           // Destination asset ID
+    };
+    account?: string;            // Optional CAIP account ID for transfers
+    amount?: string;             // Optional for exact output quotes
+  };
+}
+```
+
+### Quote response structure
+
+```typescript lib/types/quote.ts
+export interface Quote {
+  id: string;                              // Unique quote ID
+  account: Account;                         // Account information
+  originToken: TokenInfo;                   // Source token details
+  destinationToken: TokenInfo;              // Destination token details
+  expirationTimestamp: string;              // Unix timestamp (seconds)
+  tamperProofSignature: string;             // Server signature
+  originChainsOperations: ChainOperation[]; // Operations to execute on source chains
+  destinationChainOperation?: ChainOperation; // Optional destination operation
+}
+```
+
+<Note>
+  Quotes expire after 30 seconds. Always check the `expirationTimestamp` before executing.
+</Note>
+
+### Chain operation structure
+
+```typescript lib/types/quote.ts
+export interface ChainOperation {
+  userOp: {
+    sender: string;
+    nonce: string;
+    callData: string;
+    callGasLimit: string;
+    verificationGasLimit: string;
+    preVerificationGas: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+    paymaster: string;
+    paymasterVerificationGasLimit: string;
+    paymasterPostOpGasLimit: string;
+    paymasterData: string;
+    signature: string;  // Populated after signing
+  };
+  typedDataToSign: {  // EIP-712 typed data
+    domain: unknown;
+    types: unknown;
+    primaryType: string;
+    message: unknown;
+  };
+  assetType: string;  // CAIP-19 asset identifier
+  amount: string;
+}
+```
+
+## Custom hooks
+
+The application provides React hooks that wrap the API modules:
+
+### useQuotes hook
+
+Manages quote requests, signing, and execution with automatic status polling.
+
+```typescript lib/hooks/useQuotes.ts
+import { useQuotes } from '@/lib/hooks';
+
+function SwapComponent() {
+  const {
+    quote,
+    status,
+    loading,
+    error,
+    isPolling,
+    getQuote,
+    executeQuote,
+    resetQuote,
+  } = useQuotes();
+
+  const handleSwap = async () => {
+    // Request quote
+    await getQuote({
+      fromTokenAmount: '1000000',
+      fromAggregatedAssetId: 'ob:usdc',
+      toAggregatedAssetId: 'ob:eth',
+    });
+
+    // Execute quote (signs automatically)
+    await executeQuote();
+  };
+
+  return (
+    <div>
+      {loading && <p>Processing...</p>}
+      {isPolling && <p>Transaction in progress...</p>}
+      {status?.status === 'COMPLETED' && <p>Success!</p>}
+    </div>
+  );
+}
+```
+
+See the full implementation at `lib/hooks/useQuotes.ts:1`.
+
+### useBalances hook
+
+Fetches aggregated balances across chains.
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+
+function BalanceComponent() {
+  const { balances, loading, error, fetchBalances } = useBalances(predictedAddress);
+
+  return (
+    <div>
+      {balances?.totalBalance?.fiatValue && (
+        <p>Total: ${balances.totalBalance.fiatValue.toFixed(2)}</p>
+      )}
+    </div>
+  );
+}
+```
+
+See the full implementation at `lib/hooks/useBalances.ts:1`.
+
+## Error handling
+
+The API proxy handles errors consistently:
+
+```typescript app/api/[...path]/route.ts
+try {
+  const response = await fetch(apiUrl.toString(), {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+  });
+
+  const data = await response.json();
+
+  // Forward error status codes
+  if (data.error && data.statusCode) {
+    return NextResponse.json(data, { status: data.statusCode });
+  }
+
+  if (!response.ok) {
+    return NextResponse.json(data, { status: response.status });
+  }
+
+  return NextResponse.json(data);
+} catch (error) {
+  return NextResponse.json(
+    { message: 'Failed to fetch data', error },
+    { status: 400 }
+  );
+}
+```
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Cache quote data" icon="database">
+    Store quote responses to avoid redundant API calls during the 30-second validity window.
+  </Card>
+  
+  <Card title="Handle expiration" icon="clock">
+    Always validate `expirationTimestamp` before executing quotes to prevent failed transactions.
+  </Card>
+  
+  <Card title="Poll efficiently" icon="rotate">
+    Use 1-2 second intervals for status polling and stop immediately on COMPLETED or FAILED status.
+  </Card>
+  
+  <Card title="Show progress" icon="spinner">
+    Display loading states during quote requests, signing, and execution to improve UX.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<Card title="Privy wallet integration" icon="wallet" href="/integration/privy-wallet">
+  Learn how to integrate Privy for wallet signing and authentication
+</Card>

@@ -1,0 +1,437 @@
+---
+title: 'Balances API'
+description: 'Retrieve aggregated token balances across all chains'
+---
+
+## Overview
+
+The Balances API provides a unified view of a user's token holdings across all supported chains. It aggregates balances of the same asset type (e.g., USDC on Ethereum, Polygon, and Arbitrum) and provides both crypto and fiat valuations.
+
+## API Methods
+
+### getAggregatedBalance
+
+Retrieve aggregated balances for all assets held by an account.
+
+```typescript
+balancesApi.getAggregatedBalance(address: string): Promise<BalancesResponse>
+```
+
+#### Parameters
+
+<ParamField path="address" type="string" required>
+  The user's smart contract account address (predicted address from OneBalance)
+  
+  <Note>
+  This should be the predicted/smart account address, not the embedded wallet address.
+  </Note>
+</ParamField>
+
+#### Returns
+
+<ResponseField name="BalancesResponse" type="object">
+  Complete balance information across all chains and assets
+  
+  <Expandable title="BalancesResponse Structure">
+    <ResponseField name="balanceByAggregatedAsset" type="BalanceByAssetDto[]">
+      Array of balance information for each aggregated asset the user holds
+      
+      <Expandable title="BalanceByAssetDto properties">
+        <ResponseField name="aggregatedAssetId" type="string">
+          The aggregated asset identifier (e.g., "ob:usdc", "ob:eth")
+        </ResponseField>
+        
+        <ResponseField name="balance" type="string">
+          Total balance across all chains in smallest unit (wei/base units)
+        </ResponseField>
+        
+        <ResponseField name="fiatValue" type="number">
+          Total USD value of this aggregated asset
+        </ResponseField>
+        
+        <ResponseField name="symbol" type="string">
+          Optional token symbol (e.g., "USDC", "ETH")
+        </ResponseField>
+        
+        <ResponseField name="decimals" type="number">
+          Optional decimal places for the token
+        </ResponseField>
+        
+        <ResponseField name="individualAssetBalances" type="IndividualAssetBalance[]">
+          Breakdown of balances by specific chain and token contract
+          
+          <Expandable title="IndividualAssetBalance properties">
+            <ResponseField name="assetType" type="string">
+              CAIP-19 identifier for the specific asset
+              
+              Examples:
+              - `eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` (USDC on Ethereum)
+              - `eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174` (USDC on Polygon)
+            </ResponseField>
+            
+            <ResponseField name="balance" type="string">
+              Balance of this specific asset in base units
+            </ResponseField>
+            
+            <ResponseField name="fiatValue" type="number">
+              USD value of this specific asset
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="totalBalance" type="TotalBalance">
+      Overall portfolio information
+      
+      <Expandable title="TotalBalance properties">
+        <ResponseField name="fiatValue" type="number">
+          Total USD value across all assets and chains
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Basic Usage
+import { balancesApi } from '@/lib/api/balances';
+
+const accountAddress = '0x1234567890abcdef1234567890abcdef12345678';
+const balances = await balancesApi.getAggregatedBalance(accountAddress);
+
+console.log('Total portfolio value:', balances.totalBalance.fiatValue, 'USD');
+
+// Display each asset
+balances.balanceByAggregatedAsset.forEach(asset => {
+  console.log(`${asset.aggregatedAssetId}: $${asset.fiatValue}`);
+  console.log(`  Balance: ${asset.balance} (${asset.symbol})`);
+  
+  // Show breakdown by chain
+  asset.individualAssetBalances.forEach(individual => {
+    console.log(`    ${individual.assetType}: ${individual.balance}`);
+  });
+});
+```
+
+```typescript Real Usage (from useBalances.ts:19)
+const data = await balancesApi.getAggregatedBalance(predictedAddress);
+```
+</CodeGroup>
+
+## Understanding Aggregated Balances
+
+OneBalance aggregates the same token across different chains. For example:
+
+<CodeGroup>
+```json Example Response
+{
+  "balanceByAggregatedAsset": [
+    {
+      "aggregatedAssetId": "ob:usdc",
+      "balance": "150000000",
+      "fiatValue": 150.00,
+      "symbol": "USDC",
+      "decimals": 6,
+      "individualAssetBalances": [
+        {
+          "assetType": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "balance": "50000000",
+          "fiatValue": 50.00
+        },
+        {
+          "assetType": "eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+          "balance": "75000000",
+          "fiatValue": 75.00
+        },
+        {
+          "assetType": "eip155:42161/erc20:0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+          "balance": "25000000",
+          "fiatValue": 25.00
+        }
+      ]
+    },
+    {
+      "aggregatedAssetId": "ob:eth",
+      "balance": "500000000000000000",
+      "fiatValue": 1850.00,
+      "symbol": "ETH",
+      "decimals": 18,
+      "individualAssetBalances": [
+        {
+          "assetType": "eip155:1/slip44:60",
+          "balance": "300000000000000000",
+          "fiatValue": 1110.00
+        },
+        {
+          "assetType": "eip155:10/slip44:60",
+          "balance": "200000000000000000",
+          "fiatValue": 740.00
+        }
+      ]
+    }
+  ],
+  "totalBalance": {
+    "fiatValue": 2000.00
+  }
+}
+```
+</CodeGroup>
+
+This shows:
+- 150 USDC total across 3 chains (Ethereum, Polygon, Arbitrum)
+- 0.5 ETH total across 2 chains (Ethereum, Optimism)
+- Total portfolio value: $2,000
+
+## Formatting Balances for Display
+
+<CodeGroup>
+```typescript Format Balance
+import { formatUnits } from 'viem';
+
+function formatAssetBalance(asset: BalanceByAssetDto) {
+  const decimals = asset.decimals || 18;
+  const formatted = formatUnits(BigInt(asset.balance), decimals);
+  
+  return {
+    amount: formatted,
+    symbol: asset.symbol,
+    usdValue: asset.fiatValue.toFixed(2),
+    displayText: `${parseFloat(formatted).toFixed(4)} ${asset.symbol}`
+  };
+}
+
+// Usage
+balances.balanceByAggregatedAsset.forEach(asset => {
+  const formatted = formatAssetBalance(asset);
+  console.log(`${formatted.displayText} ($${formatted.usdValue})`);
+});
+```
+
+```typescript Extract Chain Balances
+import { extractChainIdFromAssetType } from '@/lib/types/chains';
+
+function getBalancesByChain(asset: BalanceByAssetDto) {
+  return asset.individualAssetBalances.map(individual => {
+    const chainId = extractChainIdFromAssetType(individual.assetType);
+    
+    return {
+      chainId,
+      balance: individual.balance,
+      fiatValue: individual.fiatValue,
+      assetType: individual.assetType
+    };
+  });
+}
+```
+</CodeGroup>
+
+## Real-World Implementation
+
+Here's how balances are fetched and managed in the actual application:
+
+<CodeGroup>
+```typescript useBalances Hook (lines 10-26)
+const fetchBalances = async () => {
+  if (!predictedAddress) {
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const data = await balancesApi.getAggregatedBalance(predictedAddress);
+    setBalances(data);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to fetch balances');
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+```typescript Auto-fetch on Address Change
+useEffect(() => {
+  if (predictedAddress) {
+    fetchBalances();
+  }
+}, [predictedAddress]);
+```
+</CodeGroup>
+
+## Understanding CAIP-19 Asset Types
+
+Individual asset types use the [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-19.md) standard:
+
+<CodeGroup>
+```text Format
+{namespace}:{chainId}/{assetType}:{assetId}
+
+Examples:
+eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+├─ eip155: Ethereum namespace
+├─ 1: Ethereum Mainnet
+├─ erc20: Token standard
+└─ 0xa0b8...: USDC contract address
+
+eip155:1/slip44:60
+├─ eip155: Ethereum namespace  
+├─ 1: Ethereum Mainnet
+├─ slip44: Native asset
+└─ 60: ETH coin type
+```
+
+```typescript Parse Asset Type
+function parseAssetType(assetType: string) {
+  const [chainPart, assetPart] = assetType.split('/');
+  const [namespace, chainId] = chainPart.split(':');
+  const [standard, address] = assetPart.split(':');
+  
+  return {
+    namespace,    // "eip155"
+    chainId,      // "1", "137", etc.
+    standard,     // "erc20", "slip44", etc.
+    address       // Contract address or coin type
+  };
+}
+```
+</CodeGroup>
+
+## Filtering and Sorting
+
+<CodeGroup>
+```typescript Filter Non-Zero Balances
+const nonZeroBalances = balances.balanceByAggregatedAsset.filter(
+  asset => BigInt(asset.balance) > 0n
+);
+```
+
+```typescript Sort by Value
+const sortedByValue = [...balances.balanceByAggregatedAsset].sort(
+  (a, b) => b.fiatValue - a.fiatValue
+);
+```
+
+```typescript Find Specific Asset
+const usdcBalance = balances.balanceByAggregatedAsset.find(
+  asset => asset.aggregatedAssetId === 'ob:usdc'
+);
+```
+</CodeGroup>
+
+## Calculating Totals
+
+<CodeGroup>
+```typescript Asset Percentage
+function getAssetPercentage(
+  asset: BalanceByAssetDto,
+  totalBalance: TotalBalance
+): number {
+  if (totalBalance.fiatValue === 0) return 0;
+  return (asset.fiatValue / totalBalance.fiatValue) * 100;
+}
+
+// Usage
+balances.balanceByAggregatedAsset.forEach(asset => {
+  const percentage = getAssetPercentage(asset, balances.totalBalance);
+  console.log(`${asset.symbol}: ${percentage.toFixed(2)}%`);
+});
+```
+
+```typescript Chain Distribution
+function getChainDistribution(asset: BalanceByAssetDto) {
+  return asset.individualAssetBalances.map(individual => {
+    const percentage = (individual.fiatValue / asset.fiatValue) * 100;
+    const chainId = extractChainIdFromAssetType(individual.assetType);
+    
+    return {
+      chainId,
+      percentage: percentage.toFixed(2),
+      value: individual.fiatValue
+    };
+  });
+}
+```
+</CodeGroup>
+
+## Error Handling
+
+<CodeGroup>
+```typescript Error Handling
+try {
+  const balances = await balancesApi.getAggregatedBalance(address);
+  return balances;
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed to fetch balances:', error.message);
+    
+    if (error.message.includes('invalid address')) {
+      // Show address validation error
+    } else if (error.message.includes('not found')) {
+      // Account has no balances yet
+      return {
+        balanceByAggregatedAsset: [],
+        totalBalance: { fiatValue: 0 }
+      };
+    }
+  }
+  
+  throw error;
+}
+```
+</CodeGroup>
+
+## Refresh Strategies
+
+<CardGroup cols={2}>
+  <Card title="On Navigation" icon="arrow-pointer">
+    Refresh balances when user navigates to balance/portfolio pages
+  </Card>
+  
+  <Card title="After Transactions" icon="check">
+    Automatically refresh after successful swaps or transfers
+  </Card>
+  
+  <Card title="Periodic Updates" icon="clock">
+    Set up periodic refresh (e.g., every 30 seconds) when page is active
+  </Card>
+  
+  <Card title="Manual Refresh" icon="rotate">
+    Provide pull-to-refresh or refresh button for user-initiated updates
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Cache Balances" icon="database">
+    Cache balance data to avoid unnecessary API calls
+  </Card>
+  
+  <Card title="Show Loading States" icon="spinner">
+    Display skeleton loaders while fetching balances
+  </Card>
+  
+  <Card title="Handle Zero Balances" icon="circle-0">
+    Show helpful empty states for new accounts
+  </Card>
+  
+  <Card title="Format Consistently" icon="hashtag">
+    Use consistent decimal places and currency formatting
+  </Card>
+</CardGroup>
+
+## Related APIs
+
+- [Assets API](/api/assets) - Get list of supported assets
+- [Chains API](/api/chains) - Get chain information for display
+- [Transactions API](/api/transactions) - View transaction history
+
+## Related Types
+
+- [BalancesResponse](/api/types/balances#balancesresponse) - Complete response structure
+- [BalanceByAssetDto](/api/types/balances#balancebyassetdto) - Per-asset balance details
+- [IndividualAssetBalance](/api/types/balances#individualassetbalance) - Per-chain balance details

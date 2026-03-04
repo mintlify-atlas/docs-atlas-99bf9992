@@ -1,0 +1,472 @@
+---
+title: Quote Types
+description: Type definitions for quote requests, responses, and operations in OneBalance
+---
+
+## Overview
+
+The Quote types define the structure for requesting and receiving swap quotes, including account information, token details, and chain-specific operations.
+
+## QuoteRequest
+
+Defines the structure for requesting a quote for a swap or transfer.
+
+```typescript
+export interface QuoteRequest {
+  from: {
+    account: {
+      sessionAddress: string;
+      adminAddress: string;
+      accountAddress: string;
+    };
+    asset: {
+      assetId: string;
+    };
+    amount: string;
+  };
+  to: {
+    asset: {
+      assetId: string;
+    };
+    account?: string; // Optional CAIP account ID for transfers to other accounts
+    amount?: string; // Optional for quotes (used for exact output)
+  };
+}
+```
+
+### Properties
+
+<ResponseField name="from" type="object" required>
+  Source information for the swap
+  
+  <Expandable title="from properties">
+    <ResponseField name="account" type="object" required>
+      Account details for the sender
+      
+      <Expandable title="account properties">
+        <ResponseField name="sessionAddress" type="string" required>
+          The session address for the account
+        </ResponseField>
+        
+        <ResponseField name="adminAddress" type="string" required>
+          The admin address that controls the account
+        </ResponseField>
+        
+        <ResponseField name="accountAddress" type="string" required>
+          The main account address
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="asset" type="object" required>
+      Asset to swap from
+      
+      <Expandable title="asset properties">
+        <ResponseField name="assetId" type="string" required>
+          The aggregated asset ID (e.g., `ob:eth`, `ob:usdc`)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="amount" type="string" required>
+      Amount to swap in string format (BigInt as string)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="to" type="object" required>
+  Destination information for the swap
+  
+  <Expandable title="to properties">
+    <ResponseField name="asset" type="object" required>
+      Asset to swap to
+      
+      <Expandable title="asset properties">
+        <ResponseField name="assetId" type="string" required>
+          The aggregated asset ID (e.g., `ob:eth`, `ob:usdc`)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="account" type="string">
+      Optional CAIP account ID for transfers to other accounts
+    </ResponseField>
+    
+    <ResponseField name="amount" type="string">
+      Optional amount for exact output quotes. If not specified, the quote will be for exact input.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```typescript
+const quoteRequest: QuoteRequest = {
+  from: {
+    account: {
+      sessionAddress: "0x1234...",
+      adminAddress: "0x5678...",
+      accountAddress: "0x9abc..."
+    },
+    asset: {
+      assetId: "ob:usdc"
+    },
+    amount: "1000000000" // 1000 USDC (6 decimals)
+  },
+  to: {
+    asset: {
+      assetId: "ob:eth"
+    }
+  }
+};
+```
+
+---
+
+## Quote
+
+Represents a complete quote response with all chain operations needed to execute the swap.
+
+```typescript
+export interface Quote {
+  id: string;
+  account: Account;
+  originToken: TokenInfo;
+  destinationToken: TokenInfo;
+  expirationTimestamp: string;
+  tamperProofSignature: string;
+  originChainsOperations: ChainOperation[];
+  destinationChainOperation?: ChainOperation;
+}
+```
+
+### Properties
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the quote
+</ResponseField>
+
+<ResponseField name="account" type="Account" required>
+  Account information for the quote. See [Account](#account) below.
+</ResponseField>
+
+<ResponseField name="originToken" type="TokenInfo" required>
+  Information about the source token. See [TokenInfo](#tokeninfo) below.
+</ResponseField>
+
+<ResponseField name="destinationToken" type="TokenInfo" required>
+  Information about the destination token. See [TokenInfo](#tokeninfo) below.
+</ResponseField>
+
+<ResponseField name="expirationTimestamp" type="string" required>
+  ISO timestamp when the quote expires
+</ResponseField>
+
+<ResponseField name="tamperProofSignature" type="string" required>
+  Cryptographic signature ensuring quote integrity
+</ResponseField>
+
+<ResponseField name="originChainsOperations" type="ChainOperation[]" required>
+  Array of operations to execute on origin chains. See [ChainOperation](#chainoperation) below.
+</ResponseField>
+
+<ResponseField name="destinationChainOperation" type="ChainOperation">
+  Optional operation to execute on the destination chain. See [ChainOperation](#chainoperation) below.
+</ResponseField>
+
+---
+
+## Account
+
+Account information structure used in quotes.
+
+```typescript
+export interface Account {
+  sessionAddress: string;
+  adminAddress: string;
+  accountAddress: string;
+}
+```
+
+### Properties
+
+<ResponseField name="sessionAddress" type="string" required>
+  The session address for the account
+</ResponseField>
+
+<ResponseField name="adminAddress" type="string" required>
+  The admin address that controls the account
+</ResponseField>
+
+<ResponseField name="accountAddress" type="string" required>
+  The main account address
+</ResponseField>
+
+---
+
+## TokenInfo
+
+Information about a token involved in a quote.
+
+```typescript
+export interface TokenInfo {
+  aggregatedAssetId: string;
+  amount: string;
+  assetType: string | string[];
+  fiatValue: never;
+}
+```
+
+### Properties
+
+<ResponseField name="aggregatedAssetId" type="string" required>
+  The aggregated asset identifier (e.g., `ob:eth`, `ob:usdc`)
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Token amount in string format (BigInt as string)
+</ResponseField>
+
+<ResponseField name="assetType" type="string | string[]" required>
+  CAIP-19 format asset type(s). Can be a single asset type or array of asset types when aggregated across multiple chains.
+  
+  Example: `"eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"` (USDC on Ethereum)
+</ResponseField>
+
+<ResponseField name="fiatValue" type="never" required>
+  Fiat value placeholder (not used in quote context)
+</ResponseField>
+
+---
+
+## ChainOperation
+
+Defines a user operation to be executed on a specific chain.
+
+```typescript
+export interface ChainOperation {
+  userOp: {
+    sender: string;
+    nonce: string;
+    callData: string;
+    callGasLimit: string;
+    verificationGasLimit: string;
+    preVerificationGas: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+    paymaster: string;
+    paymasterVerificationGasLimit: string;
+    paymasterPostOpGasLimit: string;
+    paymasterData: string;
+    signature: string;
+  };
+  typedDataToSign: {
+    domain: unknown;
+    types: unknown;
+    primaryType: string;
+    message: unknown;
+  };
+  assetType: string;
+  amount: string;
+}
+```
+
+### Properties
+
+<ResponseField name="userOp" type="object" required>
+  ERC-4337 User Operation parameters
+  
+  <Expandable title="userOp properties">
+    <ResponseField name="sender" type="string" required>
+      The account making the operation
+    </ResponseField>
+    
+    <ResponseField name="nonce" type="string" required>
+      Anti-replay parameter
+    </ResponseField>
+    
+    <ResponseField name="callData" type="string" required>
+      The data to pass to the sender during the main execution call
+    </ResponseField>
+    
+    <ResponseField name="callGasLimit" type="string" required>
+      The amount of gas to allocate the main execution call
+    </ResponseField>
+    
+    <ResponseField name="verificationGasLimit" type="string" required>
+      The amount of gas to allocate for the verification step
+    </ResponseField>
+    
+    <ResponseField name="preVerificationGas" type="string" required>
+      The amount of gas to pay for to compensate the bundler for pre-verification execution
+    </ResponseField>
+    
+    <ResponseField name="maxFeePerGas" type="string" required>
+      Maximum fee per gas (similar to EIP-1559 max_fee_per_gas)
+    </ResponseField>
+    
+    <ResponseField name="maxPriorityFeePerGas" type="string" required>
+      Maximum priority fee per gas (similar to EIP-1559 max_priority_fee_per_gas)
+    </ResponseField>
+    
+    <ResponseField name="paymaster" type="string" required>
+      Address of paymaster contract, zero address if not using paymaster
+    </ResponseField>
+    
+    <ResponseField name="paymasterVerificationGasLimit" type="string" required>
+      The amount of gas to allocate for the paymaster validation code
+    </ResponseField>
+    
+    <ResponseField name="paymasterPostOpGasLimit" type="string" required>
+      The amount of gas to allocate for the paymaster post-operation code
+    </ResponseField>
+    
+    <ResponseField name="paymasterData" type="string" required>
+      Data for paymaster (only if paymaster is not zero address)
+    </ResponseField>
+    
+    <ResponseField name="signature" type="string" required>
+      Data passed into the account along with the nonce during the verification step
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="typedDataToSign" type="object" required>
+  EIP-712 typed data structure for signing
+  
+  <Expandable title="typedDataToSign properties">
+    <ResponseField name="domain" type="unknown" required>
+      The domain separator for EIP-712
+    </ResponseField>
+    
+    <ResponseField name="types" type="unknown" required>
+      The type definitions for the structured data
+    </ResponseField>
+    
+    <ResponseField name="primaryType" type="string" required>
+      The primary type being signed
+    </ResponseField>
+    
+    <ResponseField name="message" type="unknown" required>
+      The message to sign
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="assetType" type="string" required>
+  CAIP-19 format asset type identifier for this operation
+</ResponseField>
+
+<ResponseField name="amount" type="string" required>
+  Amount being transferred in this operation (as string)
+</ResponseField>
+
+---
+
+## QuoteStatus
+
+Tracking information for an executed quote.
+
+```typescript
+export interface QuoteStatus {
+  quoteId: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS' | 'REFUNDED';
+  user: string;
+  recipientAccountId: string;
+  originChainOperations: {
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }[];
+  destinationChainOperations: {
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }[];
+}
+```
+
+### Properties
+
+<ResponseField name="quoteId" type="string" required>
+  The ID of the quote being tracked
+</ResponseField>
+
+<ResponseField name="status" type="'PENDING' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS' | 'REFUNDED'" required>
+  Current status of the quote execution
+  
+  - `PENDING`: Quote created but execution not started
+  - `IN_PROGRESS`: Execution has started
+  - `COMPLETED`: All operations completed successfully
+  - `FAILED`: Execution failed
+  - `REFUNDED`: Failed execution has been refunded
+</ResponseField>
+
+<ResponseField name="user" type="string" required>
+  The user address who initiated the quote
+</ResponseField>
+
+<ResponseField name="recipientAccountId" type="string" required>
+  The recipient account identifier
+</ResponseField>
+
+<ResponseField name="originChainOperations" type="array" required>
+  Array of transaction details from origin chains
+  
+  <Expandable title="operation properties">
+    <ResponseField name="hash" type="string" required>
+      Transaction hash
+    </ResponseField>
+    
+    <ResponseField name="chainId" type="number" required>
+      Chain ID where the transaction was executed
+    </ResponseField>
+    
+    <ResponseField name="explorerUrl" type="string" required>
+      Block explorer URL for the transaction
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="destinationChainOperations" type="array" required>
+  Array of transaction details from destination chain
+  
+  <Expandable title="operation properties">
+    <ResponseField name="hash" type="string" required>
+      Transaction hash
+    </ResponseField>
+    
+    <ResponseField name="chainId" type="number" required>
+      Chain ID where the transaction was executed
+    </ResponseField>
+    
+    <ResponseField name="explorerUrl" type="string" required>
+      Block explorer URL for the transaction
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```typescript
+const status: QuoteStatus = {
+  quoteId: "quote_123abc",
+  status: "COMPLETED",
+  user: "0x1234...",
+  recipientAccountId: "eip155:1:0x5678...",
+  originChainOperations: [
+    {
+      hash: "0xabcd...",
+      chainId: 1,
+      explorerUrl: "https://etherscan.io/tx/0xabcd..."
+    }
+  ],
+  destinationChainOperations: [
+    {
+      hash: "0xef01...",
+      chainId: 137,
+      explorerUrl: "https://polygonscan.com/tx/0xef01..."
+    }
+  ]
+};
+```

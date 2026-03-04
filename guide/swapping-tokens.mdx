@@ -1,0 +1,246 @@
+---
+title: Swapping tokens
+description: Exchange tokens across different blockchains with OneBalance's chain-abstracted swap interface
+---
+
+OneBalance enables you to swap tokens across multiple blockchains without worrying about network switching, gas fees, or bridging. The swap interface automatically finds the best rates and executes cross-chain swaps seamlessly.
+
+## Understanding chain-abstracted swaps
+
+Traditional token swaps require you to:
+
+- Be on the correct blockchain network
+- Hold native tokens for gas fees
+- Manually bridge assets between chains
+- Switch networks in your wallet
+
+With OneBalance, you simply:
+
+- Select the tokens you want to swap
+- Get a quote with the best available rate
+- Execute the swap with one click
+
+OneBalance handles all the complexity behind the scenes.
+
+## Performing a swap
+
+<Steps>
+  <Step title="Navigate to the Swap page">
+    Click the **Swap** tab in the navigation menu. This is the default page when you visit OneBalance.
+  </Step>
+
+  <Step title="Select the source token">
+    In the **Sell** section:
+    
+    - Click the token selector dropdown to view available tokens
+    - Each token shows:
+      - Token icon and symbol (e.g., USDC, ETH)
+      - Your current balance across all chains
+      - USD value of your balance
+    - Select the token you want to swap from
+    
+    The dropdown filters tokens you have balances in, making it easy to find your assets.
+  </Step>
+
+  <Step title="Enter the amount">
+    Type the amount you want to swap in the amount input field.
+    
+    You can also use the quick percentage buttons:
+    - **25%** - Swap a quarter of your balance
+    - **50%** - Swap half of your balance
+    - **75%** - Swap three-quarters of your balance
+    - **MAX** - Swap your entire balance
+    
+    As you type, you'll see the USD value update below the amount field.
+  </Step>
+
+  <Step title="Select the destination token">
+    In the **Buy** section:
+    
+    - Click the token selector dropdown
+    - Choose the token you want to receive
+    - The dropdown shows all supported tokens, not just ones you hold
+  </Step>
+
+  <Step title="Wait for the quote">
+    After entering an amount and selecting both tokens, OneBalance automatically fetches a quote:
+    
+    - A loading message appears: "Getting quote..."
+    - The system finds the best rate across all supported chains and DEXs
+    - Quotes are fetched within 1-2 seconds
+    
+    The quote updates automatically if you change the amount or tokens.
+  </Step>
+
+  <Step title="Review the quote details">
+    Once the quote loads, you'll see:
+    
+    - **Destination amount**: How much of the target token you'll receive
+    - **USD value**: The dollar value of what you're receiving
+    - **Quote countdown timer**: Shows how long the quote is valid (30 seconds)
+    - **Exchange rate**: The conversion rate between tokens
+    - **Price impact**: How much your swap affects the market price
+    - **Route information**: Which chains and protocols are used
+    
+    Review these details carefully before proceeding.
+  </Step>
+
+  <Step title="Execute the swap">
+    Click the **Swap** button to execute the transaction.
+    
+    The button states:
+    - **"Swap"** - Ready to execute
+    - **"Getting Quote..."** - Fetching price quote
+    - **"Executing Swap..."** - Transaction in progress
+    - **"Insufficient Balance"** - Not enough tokens
+    - **"Login to Swap"** - Authentication required
+  </Step>
+
+  <Step title="Monitor transaction status">
+    After clicking Swap, the transaction status component appears showing:
+    
+    - **Status badge**: PENDING, COMPLETED, or FAILED
+    - **Progress indicator**: Real-time transaction updates
+    - **Chain operations**: Which blockchains are processing your swap
+    - **Transaction hashes**: Links to view on block explorers
+    
+    The interface polls for updates every second until completion.
+  </Step>
+
+  <Step title="Transaction completion">
+    When the swap completes:
+    
+    - Status changes to **COMPLETED**
+    - Your balances automatically refresh
+    - The form clears, ready for another swap
+    - You can view the transaction in the History tab
+  </Step>
+</Steps>
+
+<Note>
+Swaps typically complete in 1-3 minutes depending on blockchain confirmation times. You don't need to keep the page open - the transaction will complete regardless.
+</Note>
+
+## Understanding quotes
+
+### Quote expiration
+
+Quotes are valid for **30 seconds**. A countdown timer shows the remaining time:
+
+- When the timer reaches zero, a new quote is automatically fetched
+- You can only execute swaps while the quote is valid
+- Expired quotes prevent you from getting unfavorable rates
+
+### Price impact
+
+Price impact shows how much your trade affects the token price:
+
+- **< 1%**: Minimal impact, good liquidity
+- **1-3%**: Moderate impact, acceptable for most trades
+- **> 3%**: High impact, consider reducing trade size
+
+<Warning>
+High price impact means you'll receive fewer tokens than the exchange rate suggests. For large swaps, consider splitting into smaller trades.
+</Warning>
+
+### Exchange rate
+
+The quote displays the conversion rate between tokens:
+
+- Example: "1 USDC = 0.00031 ETH"
+- Helps you understand if you're getting a fair price
+- Compare with other exchanges to verify rates
+
+## Advanced features
+
+### Switching swap direction
+
+Click the **circular arrow button** between the Sell and Buy sections to flip the direction:
+
+- Source token becomes destination token
+- Destination token becomes source token
+- Amounts reset to zero
+
+This is useful for quickly reversing a swap or checking rates in both directions.
+
+### Insufficient balance handling
+
+If you don't have enough tokens:
+
+- The amount field shows your available balance
+- The Swap button displays "Insufficient Balance" and is disabled
+- The quote is not fetched to save API calls
+
+Deposit more tokens to your account address to continue.
+
+### Canceling a quote
+
+If you want to cancel a quote before executing:
+
+- Click the **Cancel Quote** button below the Swap button
+- The quote clears and the form resets
+- You can start over with different parameters
+
+## Best practices
+
+<Tip>
+**Check the quote details** - Always review the destination amount, exchange rate, and price impact before swapping.
+</Tip>
+
+<Tip>
+**Use percentage buttons** - For quick swaps, use the 25%, 50%, 75%, or MAX buttons instead of typing amounts.
+</Tip>
+
+<Tip>
+**Monitor price impact** - For large swaps, check if the price impact is acceptable or if you should split the trade.
+</Tip>
+
+<Tip>
+**Bookmark common pairs** - Keep track of token pairs you swap frequently for faster access.
+</Tip>
+
+## Troubleshooting
+
+### Quote not loading
+
+- Ensure you've entered a valid amount
+- Check that you have sufficient balance
+- Verify you're logged in
+- Try reducing the swap amount
+
+### Swap button disabled
+
+- Wait for the quote to load
+- Check for sufficient balance
+- Ensure the quote hasn't expired
+- Verify both tokens are selected
+
+### Transaction failed
+
+If a swap fails:
+
+- Check the transaction status for error details
+- View the transaction on the block explorer
+- Your funds are automatically refunded
+- Try again with a smaller amount or different tokens
+
+### Quote expired during execution
+
+If the quote expires while you're reviewing:
+
+- A new quote is automatically fetched
+- Review the new quote details
+- Execute when you're ready
+
+## Understanding transaction fees
+
+OneBalance abstracts gas fees:
+
+- You don't need to hold native tokens for gas
+- Fees are included in the quote
+- The destination amount reflects all costs
+- No hidden fees or surprises
+
+<Note>
+The quote you see is the final amount you'll receive after all fees and gas costs are deducted.
+</Note>

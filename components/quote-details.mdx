@@ -1,0 +1,362 @@
+---
+title: QuoteDetails
+description: Display component for swap and transfer quote information with token prices and expiration
+---
+
+The `QuoteDetails` component displays comprehensive information about a quote, including token prices, quote ID, and expiration time.
+
+## Import
+
+```typescript
+import { QuoteDetails } from '@/components/QuoteDetails';
+```
+
+## Overview
+
+QuoteDetails is a display-only component that presents quote information in a user-friendly format. It shows:
+
+- **Token Prices**: Current price per token for both origin and destination
+- **Quote ID**: Truncated quote identifier
+- **Expiration Time**: When the quote expires
+- **Contextual Help**: Help icon with detailed quote explanation
+
+## Props
+
+<ParamField path="quote" type="Quote" required>
+  The quote object containing all quote information
+  
+  ```typescript
+  interface Quote {
+    id: string;
+    account: Account;
+    originToken: TokenInfo;
+    destinationToken: TokenInfo;
+    expirationTimestamp: string;
+    tamperProofSignature: string;
+    originChainsOperations: ChainOperation[];
+    destinationChainOperation?: ChainOperation;
+  }
+  
+  interface TokenInfo {
+    aggregatedAssetId: string;
+    amount: string;
+    assetType: string | string[];
+    fiatValue: number | { fiatValue: string }[];
+  }
+  ```
+</ParamField>
+
+## Usage Example
+
+```tsx
+import { QuoteDetails } from '@/components/QuoteDetails';
+import { formatTokenAmount } from '@/lib/utils/token';
+
+function SwapInterface() {
+  const { quote } = useQuotes();
+  
+  if (!quote) return null;
+  
+  return (
+    <QuoteDetails
+      quote={{
+        ...quote,
+        originToken: {
+          ...quote.originToken,
+          amount: formatTokenAmount(
+            quote.originToken.amount,
+            selectedSourceAsset.decimals
+          ),
+        },
+        destinationToken: {
+          ...quote.destinationToken,
+          amount: formatTokenAmount(
+            quote.destinationToken.amount,
+            selectedTargetAsset.decimals
+          ),
+        },
+      }}
+    />
+  );
+}
+```
+
+## Display Features
+
+### Token Price Calculation
+
+The component calculates the price per token from the total fiat value and amount:
+
+```typescript
+const getTokenPrice = (tokenType: 'origin' | 'destination') => {
+  if (tokenType === 'origin') {
+    const amount = parseFloat(quote.originToken.amount);
+    const fiatValue = quote.originToken.fiatValue as any;
+    const totalFiatValue = Array.isArray(fiatValue)
+      ? parseFloat(fiatValue[0]?.fiatValue || '0')
+      : parseFloat(fiatValue || '0');
+    
+    if (amount === 0 || totalFiatValue === 0) return '0';
+    const pricePerToken = totalFiatValue / amount;
+    
+    // Format based on value
+    if (pricePerToken >= 1000) {
+      return pricePerToken.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    } else if (pricePerToken >= 1) {
+      return pricePerToken.toFixed(2);
+    } else {
+      return pricePerToken.toFixed(4);
+    }
+  }
+  // Similar logic for destination token
+};
+```
+
+### Price Formatting Rules
+
+| Price Range | Format | Example |
+|-------------|--------|----------|
+| ≥ $1,000 | Comma-separated, 2 decimals | $1,234.56 |
+| ≥ $1 | 2 decimal places | $12.34 |
+| < $1 | 4 decimal places | $0.1234 |
+
+### Asset Symbol Extraction
+
+Extracts and formats the token symbol from the aggregated asset ID:
+
+```typescript
+const getAssetSymbol = (assetId: string) => {
+  return assetId.split(':')[1]?.toUpperCase() || assetId;
+};
+
+// Examples:
+// 'ob:usdc' → 'USDC'
+// 'ob:eth' → 'ETH'
+```
+
+### Expiration Time Formatting
+
+Displays the expiration time in local time format:
+
+```typescript
+const formatExpirationTime = () => {
+  const expirationDate = new Date(parseInt(quote.expirationTimestamp) * 1000);
+  return expirationDate.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+// Example output: "02:34:56 PM"
+```
+
+### Quote ID Display
+
+Truncates long quote IDs for better display:
+
+```tsx
+<div className="font-mono text-sm truncate">
+  {quote.id.slice(0, 8)}...{quote.id.slice(-8)}
+</div>
+
+// Example: "a1b2c3d4...x7y8z9w0"
+```
+
+## Layout Structure
+
+```
+┌─────────────────────────────────────────┐
+│ ℹ️ Quote Details              [?]       │
+├─────────────────────────────────────────┤
+│ ┌──────────────┐  ┌──────────────┐     │
+│ │ USDC Price   │  │ ETH Price    │     │
+│ │ 1 USDC = $1  │  │ 1 ETH = $... │     │
+│ └──────────────┘  └──────────────┘     │
+│                                         │
+│ ┌──────────────┐  ┌──────────────┐     │
+│ │ Quote ID     │  │ Expires at   │     │
+│ │ a1b2...z9w0  │  │ 02:34:56 PM  │     │
+│ └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────┘
+```
+
+## Visual Design
+
+### Card Container
+
+```tsx
+<Card className="p-4 bg-muted/50 border-border">
+  {/* Content */}
+</Card>
+```
+
+### Info Grid Cells
+
+Each piece of information is displayed in a card:
+
+```tsx
+<div className="bg-background rounded-lg p-3 border border-border">
+  <div className="text-muted-foreground text-xs">Label</div>
+  <div className="font-medium text-foreground">Value</div>
+</div>
+```
+
+## Contextual Help
+
+Integrates with the onboarding system:
+
+```tsx
+<ContextualHelp
+  title={helpContent.quote.title}
+  content={helpContent.quote.content}
+  type={helpContent.quote.type}
+  position="left"
+/>
+```
+
+## Complete Example
+
+```tsx
+import { QuoteDetails } from '@/components/QuoteDetails';
+import { useQuotes } from '@/lib/hooks';
+import { formatTokenAmount } from '@/lib/utils/token';
+
+function QuoteDisplay() {
+  const { quote } = useQuotes();
+  const assets = useAssets();
+  
+  if (!quote || quote.error) return null;
+  
+  const sourceAsset = assets.find(
+    a => a.aggregatedAssetId === quote.originToken.aggregatedAssetId
+  );
+  
+  const targetAsset = assets.find(
+    a => a.aggregatedAssetId === quote.destinationToken.aggregatedAssetId
+  );
+  
+  return (
+    <QuoteDetails
+      quote={{
+        ...quote,
+        originToken: {
+          ...quote.originToken,
+          amount: formatTokenAmount(
+            quote.originToken.amount,
+            sourceAsset?.decimals ?? 18
+          ),
+        },
+        destinationToken: {
+          ...quote.destinationToken,
+          amount: formatTokenAmount(
+            quote.destinationToken.amount,
+            targetAsset?.decimals ?? 18
+          ),
+        },
+      }}
+    />
+  );
+}
+```
+
+## Fiat Value Format
+
+The component handles two different fiat value formats:
+
+### Single Value Format
+
+```typescript
+fiatValue: 1234.56
+```
+
+### Array Format
+
+```typescript
+fiatValue: [
+  { fiatValue: "1234.56" },
+  // ... more values
+]
+```
+
+The component automatically detects and handles both formats:
+
+```typescript
+const fiatValue = quote.originToken.fiatValue as any;
+const totalFiatValue = Array.isArray(fiatValue)
+  ? parseFloat(fiatValue[0]?.fiatValue || '0')
+  : parseFloat(fiatValue || '0');
+```
+
+## Icon Usage
+
+The component uses Lucide icons for visual indicators:
+
+- **Info Icon**: Main header indicator
+- **Clock Icon**: Expiration time indicator
+
+```tsx
+import { Info, Clock } from 'lucide-react';
+
+<Info className="h-4 w-4 text-muted-foreground" />
+<Clock className="h-3 w-3" />
+```
+
+## Dependencies
+
+<CodeGroup>
+
+```typescript Components
+import { Card } from '@/components/ui/card';
+import { ContextualHelp, helpContent } from '@/components/onboarding/ContextualHelp';
+```
+
+```typescript Icons
+import { Info, Clock } from 'lucide-react';
+```
+
+```typescript Types
+import { Quote } from '@/lib/types/quote';
+```
+
+</CodeGroup>
+
+## Styling
+
+The component uses a responsive grid layout:
+
+```tsx
+<div className="grid grid-cols-1 gap-3 text-sm">
+  {/* Token Prices */}
+  <div className="grid grid-cols-2 gap-3">
+    {/* Price cards */}
+  </div>
+  
+  {/* Quote ID and Expiration */}
+  <div className="grid grid-cols-2 gap-3">
+    {/* Info cards */}
+  </div>
+</div>
+```
+
+## Related Components
+
+- [SwapForm](/components/swap-form) - Uses QuoteDetails to display swap quotes
+- [TransferForm](/components/transfer-form) - Uses QuoteDetails for transfer quotes
+
+## Best Practices
+
+<Tip>
+Always format token amounts before passing them to QuoteDetails. The component expects human-readable amounts, not raw base units.
+</Tip>
+
+<Note>
+The quote expiration timestamp is expected to be in Unix time (seconds). The component converts it to milliseconds for JavaScript Date objects.
+</Note>
+
+<Warning>
+Ensure the quote object includes all required fields. Missing fields may cause display errors or incorrect price calculations.
+</Warning>

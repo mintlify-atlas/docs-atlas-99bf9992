@@ -1,0 +1,318 @@
+---
+title: "useBalances"
+description: "React hook for fetching aggregated token balances across multiple chains"
+---
+
+## Overview
+
+The `useBalances` hook fetches and manages user token balances aggregated across all supported chains. It automatically fetches balances when a predicted address is available and provides a manual refresh function.
+
+## Import
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+const useBalances: (predictedAddress: string | null) => {
+  balances: BalancesResponse | null;
+  loading: boolean;
+  error: string | null;
+  fetchBalances: () => Promise<void>;
+}
+```
+
+## Parameters
+
+<ParamField path="predictedAddress" type="string | null" required>
+  The user's predicted account address (smart contract wallet address). Balances are automatically fetched when this changes from `null` to a valid address.
+</ParamField>
+
+## Return Values
+
+<ResponseField name="balances" type="BalancesResponse | null">
+  The aggregated balance data for all assets. Contains `balanceByAggregatedAsset` array and `totalBalance` object.
+  
+  <Expandable title="BalancesResponse Structure">
+    <ResponseField name="balanceByAggregatedAsset" type="BalanceByAssetDto[]">
+      Array of balance information for each aggregated asset.
+      
+      <Expandable title="BalanceByAssetDto Properties">
+        <ResponseField name="aggregatedAssetId" type="string">
+          The aggregated asset identifier (e.g., `"ob:eth"`, `"ob:usdc"`).
+        </ResponseField>
+        
+        <ResponseField name="balance" type="string">
+          Total balance in smallest unit (wei). BigInt represented as string.
+        </ResponseField>
+        
+        <ResponseField name="fiatValue" type="number">
+          USD value of the total balance for this asset.
+        </ResponseField>
+        
+        <ResponseField name="individualAssetBalances" type="IndividualAssetBalance[]">
+          Breakdown of balances by individual chains and asset types.
+        </ResponseField>
+        
+        <ResponseField name="symbol" type="string">
+          Asset symbol (optional, e.g., `"ETH"`, `"USDC"`).
+        </ResponseField>
+        
+        <ResponseField name="decimals" type="number">
+          Number of decimals for the asset (optional).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="totalBalance" type="TotalBalance">
+      Total portfolio value across all assets.
+      
+      <Expandable title="TotalBalance Properties">
+        <ResponseField name="fiatValue" type="number">
+          Total USD value of all assets combined.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="loading" type="boolean">
+  Indicates if balance data is currently being fetched.
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if balance fetching fails. `null` when no errors.
+</ResponseField>
+
+<ResponseField name="fetchBalances" type="() => Promise<void>">
+  Manually trigger a balance refresh. Useful after completing a swap or transfer.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+
+function BalanceCard() {
+  const { predictedAddress } = usePredictedAddress();
+  const { balances, loading, error } = useBalances(predictedAddress);
+
+  if (loading) return <div>Loading balances...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!balances) return null;
+
+  return (
+    <div>
+      <h2>Total Balance</h2>
+      <p>${balances.totalBalance.fiatValue.toFixed(2)}</p>
+      
+      <h3>Assets</h3>
+      {balances.balanceByAggregatedAsset.map(asset => (
+        <div key={asset.aggregatedAssetId}>
+          <span>{asset.symbol || asset.aggregatedAssetId}</span>
+          <span>${asset.fiatValue.toFixed(2)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Display Balance for Selected Asset
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+import { formatTokenAmount } from '@/lib/utils/token';
+
+function AssetBalance({ selectedAssetId, predictedAddress }) {
+  const { balances } = useBalances(predictedAddress);
+
+  // Find balance for selected asset
+  const selectedBalance = balances?.balanceByAggregatedAsset.find(
+    b => b.aggregatedAssetId === selectedAssetId
+  );
+
+  if (!selectedBalance) return <div>No balance</div>;
+
+  return (
+    <div>
+      <div>
+        Balance: {formatTokenAmount(selectedBalance.balance, selectedBalance.decimals || 18)}
+      </div>
+      <div>
+        Value: ${selectedBalance.fiatValue.toFixed(2)}
+      </div>
+    </div>
+  );
+}
+```
+
+### Refresh Balances After Swap
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+import { useQuotes } from '@/lib/hooks';
+import { useEffect } from 'react';
+
+function SwapForm() {
+  const { predictedAddress } = usePredictedAddress();
+  const { balances, fetchBalances } = useBalances(predictedAddress);
+  const { status, executeQuote } = useQuotes();
+
+  // Refresh balances when swap completes
+  useEffect(() => {
+    if (status?.status === 'COMPLETED') {
+      fetchBalances();
+    }
+  }, [status, fetchBalances]);
+
+  return (
+    <div>
+      <button onClick={executeQuote}>Execute Swap</button>
+    </div>
+  );
+}
+```
+
+### Balance List with Individual Chain Breakdown
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+import { formatTokenAmount } from '@/lib/utils/token';
+
+function DetailedBalances({ predictedAddress }) {
+  const { balances, loading } = useBalances(predictedAddress);
+
+  if (loading) return <div>Loading...</div>;
+  if (!balances) return null;
+
+  return (
+    <div>
+      {balances.balanceByAggregatedAsset.map(asset => (
+        <div key={asset.aggregatedAssetId}>
+          <h3>{asset.symbol}</h3>
+          <p>Total: ${asset.fiatValue.toFixed(2)}</p>
+          
+          <h4>Chain Breakdown:</h4>
+          {asset.individualAssetBalances.map((individual, idx) => (
+            <div key={idx}>
+              <span>{individual.assetType}</span>
+              <span>
+                {formatTokenAmount(individual.balance, asset.decimals || 18)}
+              </span>
+              <span>${individual.fiatValue.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Check Sufficient Balance
+
+```typescript
+import { useBalances } from '@/lib/hooks';
+import { parseTokenAmount } from '@/lib/utils/token';
+
+function SwapForm() {
+  const { predictedAddress } = usePredictedAddress();
+  const { balances } = useBalances(predictedAddress);
+  const [amount, setAmount] = useState('');
+  const [selectedAsset, setSelectedAsset] = useState('ob:usdc');
+
+  const hasSufficientBalance = (amount: string) => {
+    if (!balances || !amount) return false;
+    
+    const assetBalance = balances.balanceByAggregatedAsset.find(
+      b => b.aggregatedAssetId === selectedAsset
+    );
+    
+    if (!assetBalance) return false;
+    
+    const parsed = parseTokenAmount(amount, assetBalance.decimals || 18);
+    return BigInt(assetBalance.balance) >= BigInt(parsed);
+  };
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      
+      {amount && !hasSufficientBalance(amount) && (
+        <div>Insufficient balance</div>
+      )}
+    </div>
+  );
+}
+```
+
+## Types
+
+### BalancesResponse
+
+```typescript
+interface BalancesResponse {
+  balanceByAggregatedAsset: BalanceByAssetDto[];
+  totalBalance: TotalBalance;
+}
+```
+
+### BalanceByAssetDto
+
+```typescript
+interface BalanceByAssetDto {
+  aggregatedAssetId: string;
+  balance: string;
+  fiatValue: number;
+  individualAssetBalances: IndividualAssetBalance[];
+  symbol?: string;
+  decimals?: number;
+}
+```
+
+### IndividualAssetBalance
+
+```typescript
+interface IndividualAssetBalance {
+  assetType: string; // CAIP-19 format (e.g., eip155:1/erc20:0x...)
+  balance: string;
+  fiatValue: number;
+}
+```
+
+### TotalBalance
+
+```typescript
+interface TotalBalance {
+  fiatValue: number;
+}
+```
+
+## Notes
+
+- Balances are automatically fetched when `predictedAddress` changes from `null` to a valid address
+- The hook uses the Balances API endpoint to fetch aggregated data
+- Balance amounts are returned as strings (BigInt) in the smallest unit (wei)
+- Use `formatTokenAmount()` utility to convert balances to human-readable format
+- Individual asset balances show the breakdown across different chains
+
+## Related Hooks
+
+- [useAssets](/api/hooks/use-assets) - Get available assets
+- [useQuotes](/api/hooks/use-quotes) - Fetch and execute swap quotes
+- [useEmbeddedWallet](/api/hooks/use-embedded-wallet) - Get embedded wallet
+
+## See Also
+
+- [Balances API](/api/balances) - Backend API endpoint
+- [Token Utilities](/api/utilities/token) - Format and parse token amounts

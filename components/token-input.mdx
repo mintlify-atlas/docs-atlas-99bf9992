@@ -1,0 +1,323 @@
+---
+title: TokenInput
+description: Reusable token selection and amount input component with balance display
+---
+
+The `TokenInput` component provides a unified interface for selecting tokens and entering amounts. It includes balance display, USD value calculation, and percentage shortcuts.
+
+## Import
+
+```typescript
+import { TokenInput } from '@/components/TokenInput';
+```
+
+## Overview
+
+TokenInput is a reusable component used throughout the application for token-related inputs. It combines:
+
+- **Asset Selection**: Token picker with search and balance display
+- **Amount Input**: Numeric input with validation
+- **Balance Display**: Shows available balance for selected token
+- **USD Value**: Calculates and displays fiat value
+- **Percentage Shortcuts**: Quick-select buttons (25%, 50%, 75%, MAX)
+
+## Props
+
+<ParamField path="label" type="string" required>
+  Display label for the input field (e.g., "Sell", "Buy", "You're sending")
+</ParamField>
+
+<ParamField path="assets" type="Asset[]" required>
+  Array of available assets to choose from
+  
+  ```typescript
+  interface Asset {
+    aggregatedAssetId: string;
+    symbol: string;
+    name: string;
+    decimals: number;
+    aggregatedEntities: AggregatedAssetEntity[];
+  }
+  ```
+</ParamField>
+
+<ParamField path="selectedAsset" type="string" required>
+  The aggregated asset ID of the currently selected token (e.g., "ob:usdc")
+</ParamField>
+
+<ParamField path="onAssetChange" type="(value: string) => void" required>
+  Callback fired when the selected asset changes
+</ParamField>
+
+<ParamField path="amount" type="string" required>
+  The current amount value (human-readable format)
+</ParamField>
+
+<ParamField path="onAmountChange" type="(e: React.ChangeEvent<HTMLInputElement>) => void" required>
+  Callback fired when the amount input changes
+</ParamField>
+
+<ParamField path="balance" type="TokenBalance | null" default="null">
+  Balance information for the selected token
+  
+  ```typescript
+  interface TokenBalance {
+    aggregatedAssetId: string;
+    balance: string;      // Raw balance in token's base unit
+    fiatValue: number;    // USD value of the balance
+  }
+  ```
+</ParamField>
+
+<ParamField path="showPercentageButtons" type="boolean" default="false">
+  Whether to show percentage shortcut buttons (25%, 50%, 75%, MAX)
+</ParamField>
+
+<ParamField path="onPercentageClick" type="(percentage: number) => void">
+  Callback fired when a percentage button is clicked. Receives the percentage (25, 50, 75, or 100)
+</ParamField>
+
+<ParamField path="disabled" type="boolean" default="false">
+  Whether the input is disabled
+</ParamField>
+
+<ParamField path="readOnly" type="boolean" default="false">
+  Whether the amount input is read-only (used for output amounts in swaps)
+</ParamField>
+
+<ParamField path="balances" type="TokenBalance[]" default="[]">
+  Array of all token balances (passed to AssetSelect for balance display)
+</ParamField>
+
+<ParamField path="usdValue" type="string | null" default="null">
+  Override USD value to display (if not provided, calculated automatically)
+</ParamField>
+
+## Usage Examples
+
+### Basic Input
+
+```tsx
+import { TokenInput } from '@/components/TokenInput';
+import { useState } from 'react';
+
+function MyComponent() {
+  const [asset, setAsset] = useState('ob:usdc');
+  const [amount, setAmount] = useState('');
+  
+  return (
+    <TokenInput
+      label="Amount"
+      assets={assets}
+      selectedAsset={asset}
+      onAssetChange={setAsset}
+      amount={amount}
+      onAmountChange={(e) => setAmount(e.target.value)}
+    />
+  );
+}
+```
+
+### With Balance and Percentage Buttons
+
+```tsx
+<TokenInput
+  label="Sell"
+  assets={assets}
+  selectedAsset={sourceAsset}
+  onAssetChange={setSourceAsset}
+  amount={amount}
+  onAmountChange={(e) => setAmount(e.target.value)}
+  balance={sourceBalance}
+  showPercentageButtons={true}
+  onPercentageClick={(percentage) => {
+    if (sourceBalance) {
+      const maxAmount = formatTokenAmount(
+        sourceBalance.balance,
+        selectedAsset.decimals
+      );
+      const targetAmount = (parseFloat(maxAmount) * percentage / 100).toString();
+      setAmount(targetAmount);
+    }
+  }}
+  balances={allBalances}
+/>
+```
+
+### Read-Only (Output Display)
+
+```tsx
+<TokenInput
+  label="Buy"
+  assets={assets}
+  selectedAsset={targetAsset}
+  onAssetChange={setTargetAsset}
+  amount={calculatedAmount}
+  onAmountChange={() => {}} // No-op for read-only
+  balance={targetBalance}
+  readOnly={true}
+  usdValue="1234.56"
+  balances={allBalances}
+/>
+```
+
+## Features
+
+### Amount Validation
+
+The component validates that input is a valid number:
+
+```typescript
+const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  
+  // Only allow valid number format
+  if (!/^(\d*\.?\d*)?$/.test(value)) return;
+  
+  // Call parent handler
+  onAmountChange(e);
+};
+```
+
+### USD Value Calculation
+
+Automatically calculates USD value based on balance and amount:
+
+```typescript
+const getUSDValue = () => {
+  if (!balance || !amount || !selectedAssetData) return null;
+  
+  const numericAmount = parseFloat(amount);
+  if (isNaN(numericAmount) || numericAmount === 0) return null;
+  
+  const balanceAmount = parseFloat(
+    formatTokenAmount(balance.balance, selectedAssetData.decimals || 18)
+  );
+  if (balanceAmount === 0) return null;
+  
+  const pricePerToken = balance.fiatValue / balanceAmount;
+  const usdValue = numericAmount * pricePerToken;
+  return usdValue.toFixed(2);
+};
+```
+
+### Balance Display
+
+Shows formatted balance with token symbol:
+
+```typescript
+const formatBalance = (balance: TokenBalance, asset: Asset) => {
+  const formattedAmount = formatTokenAmount(balance.balance, asset.decimals || 18);
+  const numericAmount = Number(formattedAmount);
+  return numericAmount.toFixed(numericAmount < 0.01 ? 6 : 2);
+};
+```
+
+### Percentage Shortcuts
+
+Optional quick-select buttons:
+
+```tsx
+{showPercentageButtons && balance && selectedAssetData && onPercentageClick && (
+  <div className="flex gap-2 px-1">
+    {[25, 50, 75, 100].map(percentage => (
+      <Button
+        key={percentage}
+        variant="outline"
+        size="sm"
+        onClick={() => onPercentageClick(percentage)}
+        disabled={disabled}
+      >
+        {percentage === 100 ? 'MAX' : `${percentage}%`}
+      </Button>
+    ))}
+  </div>
+)}
+```
+
+## Layout Structure
+
+```
+┌─────────────────────────────────────────┐
+│ Label                    [25%][50%][75%][MAX] │
+├─────────────────────────────────────────┤
+│                                         │
+│  1234.56                    [USDC ▼]   │
+│  $1,234.56                  1000 USDC  │
+│                                         │
+└─────────────────────────────────────────┘
+  Amount    USD Value    Selector  Balance
+```
+
+## Styling
+
+The component uses Tailwind CSS classes and adapts to light/dark themes:
+
+- Container: `bg-muted/50 rounded-2xl p-4 border border-border`
+- Input: `text-2xl font-medium bg-transparent`
+- USD Value: `text-sm text-muted-foreground`
+- Balance: `text-xs text-muted-foreground`
+
+## Onboarding Support
+
+The amount input includes a data attribute for onboarding:
+
+```tsx
+<Input
+  data-onboarding="amount-input"
+  // ... other props
+/>
+```
+
+## Asset Symbol Helper
+
+Extracts display symbol from aggregated asset ID:
+
+```typescript
+const getAssetSymbol = (assetId: string) => {
+  return assetId.split(':')[1]?.toUpperCase() || assetId;
+};
+
+// Example:
+// 'ob:usdc' → 'USDC'
+// 'ob:eth' → 'ETH'
+```
+
+## Dependencies
+
+<CodeGroup>
+
+```typescript Components
+import { AssetSelect } from '@/components/AssetSelect';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+```
+
+```typescript Types
+import { Asset } from '@/lib/types/assets';
+```
+
+```typescript Utilities
+import { formatTokenAmount } from '@/lib/utils/token';
+```
+
+</CodeGroup>
+
+## Related Components
+
+- [SwapForm](/components/swap-form) - Uses TokenInput for swap interface
+- [TransferForm](/components/transfer-form) - Uses TokenInput for transfers
+
+## Best Practices
+
+<Tip>
+Always validate the amount on the parent component before using it in API calls. The TokenInput component only validates format, not value constraints.
+</Tip>
+
+<Warning>
+When using percentage buttons, ensure the `onPercentageClick` handler accounts for token decimals correctly to avoid precision errors.
+</Warning>
+
+<Note>
+The `readOnly` prop is useful for output fields (like the destination amount in a swap) where users shouldn't edit the value directly.
+</Note>

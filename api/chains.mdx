@@ -1,0 +1,521 @@
+---
+title: 'Chains API'
+description: 'Retrieve information about supported blockchain networks'
+---
+
+## Overview
+
+The Chains API provides a list of all blockchain networks supported by OneBalance. This includes both mainnet and testnet chains, along with their metadata for proper identification and display.
+
+## API Methods
+
+### getChains
+
+Retrieve the complete list of supported blockchain chains.
+
+```typescript
+chainsApi.getChains(): Promise<Chain[]>
+```
+
+#### Parameters
+
+This method takes no parameters.
+
+#### Returns
+
+<ResponseField name="Chain[]" type="array">
+  Array of all supported blockchain chains
+  
+  <Expandable title="Chain Structure">
+    <ResponseField name="chain" type="ChainMetadata">
+      Chain identification information in CAIP-2 format
+      
+      <Expandable title="ChainMetadata properties">
+        <ResponseField name="chain" type="string">
+          Chain name/identifier
+        </ResponseField>
+        
+        <ResponseField name="namespace" type="string">
+          Blockchain namespace (e.g., "eip155" for Ethereum-compatible chains)
+        </ResponseField>
+        
+        <ResponseField name="reference" type="string">
+          Chain ID or reference identifier (e.g., "1" for Ethereum mainnet)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="isTestnet" type="boolean">
+      Whether this is a testnet chain
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Basic Usage
+import { chainsApi } from '@/lib/api/chains';
+
+const chains = await chainsApi.getChains();
+
+console.log(`Found ${chains.length} supported chains`);
+
+// Display each chain
+chains.forEach(chain => {
+  const chainId = chain.chain.reference;
+  const isTest = chain.isTestnet ? ' (Testnet)' : '';
+  console.log(`Chain ${chainId}: ${chain.chain.chain}${isTest}`);
+});
+```
+
+```typescript Real Usage (from useChains.ts:19)
+const data: Chain[] = await chainsApi.getChains();
+```
+</CodeGroup>
+
+## Example Response
+
+<CodeGroup>
+```json Sample Chains Response
+[
+  {
+    "chain": {
+      "chain": "Ethereum Mainnet",
+      "namespace": "eip155",
+      "reference": "1"
+    },
+    "isTestnet": false
+  },
+  {
+    "chain": {
+      "chain": "Polygon",
+      "namespace": "eip155",
+      "reference": "137"
+    },
+    "isTestnet": false
+  },
+  {
+    "chain": {
+      "chain": "Arbitrum",
+      "namespace": "eip155",
+      "reference": "42161"
+    },
+    "isTestnet": false
+  },
+  {
+    "chain": {
+      "chain": "Base",
+      "namespace": "eip155",
+      "reference": "8453"
+    },
+    "isTestnet": false
+  },
+  {
+    "chain": {
+      "chain": "Optimism",
+      "namespace": "eip155",
+      "reference": "10"
+    },
+    "isTestnet": false
+  }
+]
+```
+</CodeGroup>
+
+## Chain Configuration
+
+OneBalance provides additional chain metadata through the `CHAIN_CONFIG` constant:
+
+<CodeGroup>
+```typescript Chain Config (from chains.ts:17-67)
+export const CHAIN_CONFIG: Record<string, ChainConfig> = {
+  '1': {
+    name: 'Ethereum Mainnet',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/1.svg',
+  },
+  '10': {
+    name: 'Optimism',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/10.svg',
+  },
+  '137': {
+    name: 'Polygon',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/137.svg',
+  },
+  '8453': {
+    name: 'Base',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/8453.svg',
+  },
+  '42161': {
+    name: 'Arbitrum',
+    logoUrl: 'https://storage.googleapis.com/onebalance-public-assets/networks/42161.svg',
+  },
+  // ... more chains
+};
+```
+</CodeGroup>
+
+## Utility Functions
+
+The chains module provides several utility functions for working with chain data:
+
+### getChainName
+
+Get the human-readable name for a chain ID.
+
+```typescript
+getChainName(chainId: string | number): string
+```
+
+<CodeGroup>
+```typescript Example
+import { getChainName } from '@/lib/types/chains';
+
+const name = getChainName('1');
+console.log(name); // "Ethereum Mainnet"
+
+const name2 = getChainName(137);
+console.log(name2); // "Polygon"
+
+const name3 = getChainName('99999');
+console.log(name3); // "Chain 99999" (fallback)
+```
+</CodeGroup>
+
+### getChainLogoUrl
+
+Get the logo URL for a chain.
+
+```typescript
+getChainLogoUrl(chainId: string | number): string
+```
+
+<CodeGroup>
+```typescript Example
+import { getChainLogoUrl } from '@/lib/types/chains';
+
+const logoUrl = getChainLogoUrl('1');
+console.log(logoUrl);
+// "https://storage.googleapis.com/onebalance-public-assets/networks/1.svg"
+
+const noLogo = getChainLogoUrl('99999');
+console.log(noLogo); // "" (empty string for unsupported chains)
+```
+</CodeGroup>
+
+### getChainConfig
+
+Get complete configuration for a chain.
+
+```typescript
+getChainConfig(chainId: string | number): ChainConfig | null
+```
+
+<CodeGroup>
+```typescript Example
+import { getChainConfig } from '@/lib/types/chains';
+
+const config = getChainConfig('1');
+if (config) {
+  console.log(config.name);    // "Ethereum Mainnet"
+  console.log(config.logoUrl); // Logo URL
+}
+
+const unknown = getChainConfig('99999');
+console.log(unknown); // null
+```
+</CodeGroup>
+
+### extractChainIdFromCAIP
+
+Extract chain ID from CAIP chain identifier.
+
+```typescript
+extractChainIdFromCAIP(caipChainId: string): string
+```
+
+<CodeGroup>
+```typescript Example (from chains.ts:91-93)
+import { extractChainIdFromCAIP } from '@/lib/types/chains';
+
+const chainId = extractChainIdFromCAIP('eip155:1');
+console.log(chainId); // "1"
+
+const solana = extractChainIdFromCAIP('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+console.log(solana); // "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+```
+</CodeGroup>
+
+### extractChainIdFromAssetType
+
+Extract chain ID from CAIP-19 asset type.
+
+```typescript
+extractChainIdFromAssetType(assetType: string): string
+```
+
+<CodeGroup>
+```typescript Example (from chains.ts:96-99)
+import { extractChainIdFromAssetType } from '@/lib/types/chains';
+
+const chainId = extractChainIdFromAssetType(
+  'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+);
+console.log(chainId); // "1"
+
+const polygonId = extractChainIdFromAssetType(
+  'eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174'
+);
+console.log(polygonId); // "137"
+```
+</CodeGroup>
+
+## Real-World Implementation
+
+<CodeGroup>
+```typescript useChains Hook (lines 17-34)
+const fetchChains = async () => {
+  try {
+    const data: Chain[] = await chainsApi.getChains();
+    setChains(data);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to fetch chains');
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  fetchChains();
+}, []);
+```
+
+```typescript Display Chain Info
+import { getChainName, getChainLogoUrl } from '@/lib/types/chains';
+
+function ChainBadge({ chainId }: { chainId: string }) {
+  const name = getChainName(chainId);
+  const logoUrl = getChainLogoUrl(chainId);
+  
+  return (
+    <div className="chain-badge">
+      {logoUrl && <img src={logoUrl} alt={name} width={20} height={20} />}
+      <span>{name}</span>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Supported Chains
+
+OneBalance currently supports the following chains:
+
+<CardGroup cols={3}>
+  <Card title="Ethereum" icon="ethereum">
+    Chain ID: `1`
+    
+    The original smart contract platform
+  </Card>
+  
+  <Card title="Optimism" icon="circle">
+    Chain ID: `10`
+    
+    Ethereum Layer 2 for lower fees
+  </Card>
+  
+  <Card title="Polygon" icon="hexagon">
+    Chain ID: `137`
+    
+    Fast and low-cost EVM sidechain
+  </Card>
+  
+  <Card title="Base" icon="b">
+    Chain ID: `8453`
+    
+    Coinbase's Ethereum L2
+  </Card>
+  
+  <Card title="Arbitrum" icon="circle-nodes">
+    Chain ID: `42161`
+    
+    Popular Ethereum Layer 2
+  </Card>
+  
+  <Card title="Linea" icon="line-columns">
+    Chain ID: `59144`
+    
+    ConsenSys zkEVM L2
+  </Card>
+  
+  <Card title="Avalanche" icon="mountain">
+    Chain ID: `43114`
+    
+    High-throughput blockchain
+  </Card>
+  
+  <Card title="Unichain" icon="u">
+    Chain ID: `130`
+    
+    Uniswap's dedicated chain
+  </Card>
+  
+  <Card title="Solana" icon="s">
+    Chain ID: `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`
+    
+    High-performance blockchain
+  </Card>
+</CardGroup>
+
+## Filtering Chains
+
+<CodeGroup>
+```typescript Filter Mainnets Only
+const mainnets = chains.filter(chain => !chain.isTestnet);
+console.log(`${mainnets.length} mainnet chains available`);
+```
+
+```typescript Filter Testnets
+const testnets = chains.filter(chain => chain.isTestnet);
+console.log(`${testnets.length} testnet chains for testing`);
+```
+
+```typescript Find Specific Chain
+const ethereum = chains.find(chain => chain.chain.reference === '1');
+if (ethereum) {
+  console.log('Found Ethereum:', ethereum.chain.chain);
+}
+```
+</CodeGroup>
+
+## Building Chain Selectors
+
+<CodeGroup>
+```typescript Chain Selector
+import { chainsApi } from '@/lib/api/chains';
+import { getChainName, getChainLogoUrl } from '@/lib/types/chains';
+import { useState, useEffect } from 'react';
+
+function ChainSelector({ onSelect }: { onSelect: (chainId: string) => void }) {
+  const [chains, setChains] = useState<Chain[]>([]);
+  
+  useEffect(() => {
+    chainsApi.getChains().then(data => {
+      // Filter out testnets for production
+      setChains(data.filter(c => !c.isTestnet));
+    });
+  }, []);
+  
+  return (
+    <select onChange={(e) => onSelect(e.target.value)}>
+      <option value="">Select a chain...</option>
+      {chains.map(chain => {
+        const chainId = chain.chain.reference;
+        const name = getChainName(chainId);
+        
+        return (
+          <option key={chainId} value={chainId}>
+            {name}
+          </option>
+        );
+      })}
+    </select>
+  );
+}
+```
+</CodeGroup>
+
+## Understanding CAIP-2
+
+Chain identifiers use the [CAIP-2](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md) standard:
+
+```text
+{namespace}:{reference}
+
+Examples:
+eip155:1                                    → Ethereum Mainnet
+eip155:137                                  → Polygon
+eip155:42161                                → Arbitrum
+solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp    → Solana Mainnet
+```
+
+- **namespace**: Blockchain type (e.g., `eip155` for EVM, `solana` for Solana)
+- **reference**: Chain-specific identifier (chain ID for EVM chains)
+
+## Caching Strategy
+
+<Tip>
+Chain lists are relatively static. Cache them to improve performance.
+</Tip>
+
+<CodeGroup>
+```typescript Cache Chains
+let cachedChains: Chain[] | null = null;
+
+async function getChainsWithCache(): Promise<Chain[]> {
+  if (cachedChains) {
+    return cachedChains;
+  }
+  
+  cachedChains = await chainsApi.getChains();
+  return cachedChains;
+}
+```
+</CodeGroup>
+
+## Error Handling
+
+<CodeGroup>
+```typescript Error Handling
+try {
+  const chains = await chainsApi.getChains();
+  return chains;
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed to fetch chains:', error.message);
+    
+    // Provide fallback chain list
+    return [
+      {
+        chain: { chain: 'Ethereum Mainnet', namespace: 'eip155', reference: '1' },
+        isTestnet: false
+      }
+    ];
+  }
+  
+  throw error;
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Cache Results" icon="database">
+    Chains change very rarely - cache indefinitely or until app restart
+  </Card>
+  
+  <Card title="Use Utility Functions" icon="wrench">
+    Use provided utilities like `getChainName()` for consistent display
+  </Card>
+  
+  <Card title="Show Chain Logos" icon="image">
+    Display chain logos for better visual identification
+  </Card>
+  
+  <Card title="Filter Appropriately" icon="filter">
+    Hide testnets in production, show them in development
+  </Card>
+</CardGroup>
+
+## Related APIs
+
+- [Assets API](/api/assets) - Asset entities reference chain IDs
+- [Balances API](/api/balances) - Individual balances include chain information
+- [Transactions API](/api/transactions) - Transactions include chain operations
+
+## Related Types
+
+- [Chain](/api/types/chains#chain) - Complete chain structure
+- [ChainMetadata](/api/types/chains#chainmetadata) - Chain identification
+- [ChainConfig](/api/types/chains#chainconfig) - Display configuration

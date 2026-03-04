@@ -1,122 +1,130 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "OneBalance Chain-Abstracted Swap",
+  "theme": "palm",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#6366f1",
+    "light": "#818cf8",
+    "dark": "#4f46e5"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/dzimiks/onebalance-chain-abstracted-swap"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/dzimiks/onebalance-chain-abstracted-swap"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "features"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Features",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "features/chain-abstracted-swaps",
+              "features/cross-chain-transfers",
+              "features/portfolio-tracking",
+              "features/transaction-history"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "User Guide",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "guide/authentication",
+              "guide/swapping-tokens",
+              "guide/transferring-tokens",
+              "guide/managing-wallet"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Integration",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "integration/setup",
+              "integration/configuration",
+              "integration/onebalance-api",
+              "integration/privy-wallet"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "API Modules",
             "pages": [
-              "api-reference/introduction"
+              "api/quotes",
+              "api/transactions",
+              "api/balances",
+              "api/assets",
+              "api/chains"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "React Hooks",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/hooks/use-quotes",
+              "api/hooks/use-balances",
+              "api/hooks/use-assets",
+              "api/hooks/use-chains",
+              "api/hooks/use-embedded-wallet"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types/quote",
+              "api/types/transaction",
+              "api/types/balances",
+              "api/types/assets",
+              "api/types/chains"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Trading Components",
+            "pages": [
+              "components/swap-form",
+              "components/transfer-form",
+              "components/token-input",
+              "components/quote-details"
+            ]
+          },
+          {
+            "group": "Wallet Components",
+            "pages": [
+              "components/connect-button",
+              "components/balance-display",
+              "components/asset-list"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "components/transaction-status",
+              "components/transaction-history",
+              "components/onboarding"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

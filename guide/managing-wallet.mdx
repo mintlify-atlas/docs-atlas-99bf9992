@@ -1,0 +1,361 @@
+---
+title: Managing your wallet
+description: View balances, track portfolio value, and manage your OneBalance wallet across multiple blockchains
+---
+
+Your OneBalance wallet aggregates assets across multiple blockchains into a single, unified view. This guide covers how to view balances, understand your portfolio, and manage your wallet.
+
+## Opening your wallet
+
+Access your wallet details from anywhere in the application:
+
+<Steps>
+  <Step title="Locate the wallet button">
+    In the top-right corner of the header, find the wallet button that displays:
+    - A green pulsing dot (connection indicator)
+    - A wallet icon
+    - Your shortened address (e.g., `0x1234...5678`)
+    - A chevron indicating it's clickable
+  </Step>
+
+  <Step title="Click to open">
+    Click the wallet button to open the wallet details dialog.
+  </Step>
+</Steps>
+
+The wallet dialog appears as an overlay and can be closed by:
+- Clicking the X button
+- Clicking outside the dialog
+- Pressing the Escape key
+
+## Understanding your account address
+
+Your account address is displayed prominently at the top of the wallet dialog.
+
+### Copying your address
+
+<Steps>
+  <Step title="Find the account address section">
+    Below the "Your Account" header, you'll see your full account address.
+  </Step>
+
+  <Step title="Click the Copy button">
+    Click the **Copy** button next to the address.
+  </Step>
+
+  <Step title="Confirmation">
+    A confirmation message appears when the address is successfully copied to your clipboard.
+  </Step>
+</Steps>
+
+<Tip>
+Use this address to receive tokens from exchanges, other wallets, or friends. It works across all supported chains.
+</Tip>
+
+### Account address vs. session address
+
+OneBalance uses two types of addresses:
+
+- **Account address**: Your OneBalance smart contract account (shown in the wallet dialog)
+  - Where your funds are stored
+  - Used to receive deposits
+  - Aggregates balances across all chains
+
+- **Session address**: Your Privy embedded wallet address (used internally)
+  - Used to sign transactions
+  - Not visible in the UI
+  - Manages your account address
+
+<Note>
+Always use your **account address** when receiving funds, not the session address.
+</Note>
+
+## Viewing portfolio summary
+
+The portfolio summary shows your aggregated wealth across all supported blockchains.
+
+### Portfolio value card
+
+The green-highlighted card displays:
+
+- **Total Portfolio Value**: Your total holdings in USD
+- **Asset count**: Number of different tokens you hold
+- **Chain count**: Number of blockchains with your assets
+- **Refresh button**: Manual refresh icon
+
+### Understanding the numbers
+
+- **Total value** is calculated in real-time using current market prices
+- **Asset count** only includes tokens with positive balances
+- **Chain count** shows unique blockchains across all your assets
+
+### Refreshing balances
+
+To update your portfolio:
+
+<Steps>
+  <Step title="Click the refresh icon">
+    In the portfolio summary card, click the circular refresh icon in the top-right.
+  </Step>
+
+  <Step title="Wait for update">
+    The icon spins while fetching updated balances from all chains.
+  </Step>
+
+  <Step title="View updated data">
+    All balances and values refresh to show current information.
+  </Step>
+</Steps>
+
+<Note>
+Balances automatically refresh when you open the wallet dialog or complete transactions. Manual refresh is useful if you've received tokens while the dialog is open.
+</Note>
+
+## Viewing asset balances
+
+The Asset Balances section lists all tokens you hold, aggregated across all chains.
+
+### Asset list overview
+
+Each asset card shows:
+
+- **Token icon**: Visual identifier for the token
+- **Token symbol**: e.g., USDC, ETH, USDT
+- **Chain count**: Number of chains holding this token
+- **Total value**: USD value of all holdings of this token
+- **Total amount**: Combined balance across all chains
+- **Expand button**: Chevron to view chain-by-chain breakdown
+
+### Sorting
+
+Assets are automatically sorted by:
+
+1. **USD value** (highest to lowest)
+2. Only assets with positive value are shown
+
+### Expanding asset details
+
+To see which chains hold a specific token:
+
+<Steps>
+  <Step title="Find the asset">
+    Locate the token in the Asset Balances list.
+  </Step>
+
+  <Step title="Click the chain count">
+    Click the text showing "X chain(s)" with the chevron icon.
+  </Step>
+
+  <Step title="View chain distribution">
+    The asset card expands to show:
+    
+    - **Chain name**: e.g., Arbitrum, Ethereum, Optimism
+    - **Chain icon**: Visual identifier for the blockchain
+    - **Balance on chain**: Amount of the token on that specific chain
+    - **Value on chain**: USD value on that chain
+    - **Percentage**: What % of your total holdings of this token
+    
+    Chains are sorted by value (highest to lowest).
+  </Step>
+
+  <Step title="Collapse details">
+    Click the chain count again to collapse the expansion.
+  </Step>
+</Steps>
+
+<Tip>
+Use the chain distribution view to understand where your assets are located before performing swaps or transfers.
+</Tip>
+
+## Empty wallet state
+
+If you haven't deposited any tokens yet, you'll see:
+
+- A wallet icon
+- "No assets yet" message
+- Explanation text
+- Getting started tips
+
+### Getting started with your wallet
+
+The empty state provides helpful tips:
+
+1. Send assets directly to your account address
+2. Balances will sync across all supported chains
+3. View detailed breakdowns by expanding each asset
+
+<Steps>
+  <Step title="Copy your account address">
+    Use the Copy button in the Account Address section.
+  </Step>
+
+  <Step title="Send tokens from another wallet or exchange">
+    - Choose any supported token (USDC, ETH, USDT, etc.)
+    - Send to your OneBalance account address
+    - Use any supported chain (Arbitrum, Ethereum, etc.)
+  </Step>
+
+  <Step title="Wait for confirmation">
+    - Transactions typically confirm in 1-5 minutes
+    - Balances update automatically
+  </Step>
+
+  <Step title="Refresh to see your balance">
+    Open the wallet dialog to see your updated portfolio.
+  </Step>
+</Steps>
+
+## Portfolio tracking features
+
+### Real-time price updates
+
+Asset values update based on:
+
+- Current market prices for each token
+- Real-time exchange rates
+- Aggregated across all chains
+
+### Multi-chain aggregation
+
+OneBalance automatically:
+
+- Scans all supported chains for your assets
+- Aggregates balances of the same token
+- Calculates total value in USD
+- Shows chain-by-chain distribution
+
+### Supported chains
+
+Your wallet can hold assets on:
+
+- Arbitrum
+- Ethereum Mainnet
+- Optimism
+- Polygon
+- Base
+- And other supported networks
+
+All balances aggregate automatically regardless of which chain you deposited to.
+
+<Note>
+You don't need to manually add chains or switch networks. OneBalance detects assets on all supported chains automatically.
+</Note>
+
+## Transaction history
+
+While the wallet dialog focuses on balances, you can view transaction history:
+
+<Steps>
+  <Step title="Navigate to History tab">
+    Click the **History** tab in the main navigation menu.
+  </Step>
+
+  <Step title="View all transactions">
+    See a complete list of:
+    - All swaps you've performed
+    - All transfers you've sent
+    - Transaction status (completed, pending, failed)
+    - Transaction details and block explorer links
+  </Step>
+</Steps>
+
+See the [Transaction History](#) guide for more details.
+
+## Best practices
+
+<Tip>
+**Bookmark your address** - Save your account address somewhere safe for quick reference.
+</Tip>
+
+<Tip>
+**Check chain distribution** - Before swapping, expand assets to see which chains hold your tokens.
+</Tip>
+
+<Tip>
+**Regular balance checks** - Open your wallet periodically to ensure all deposits arrived.
+</Tip>
+
+<Tip>
+**Verify before depositing** - Always copy your address directly from the wallet dialog to avoid errors.
+</Tip>
+
+## Security tips
+
+### Protecting your wallet
+
+- Never share your Privy authentication credentials
+- Use strong passwords for your authentication method (email, Google, etc.)
+- Enable two-factor authentication on your authentication accounts
+- Verify addresses before sending large amounts
+
+### Safe deposit practices
+
+- Always copy-paste addresses instead of typing
+- Send a small test deposit first for large amounts
+- Verify the transaction on the block explorer
+- Wait for confirmations before assuming deposit success
+
+<Warning>
+Never share your login credentials or authentication method with anyone. OneBalance support will never ask for your password or private keys.
+</Warning>
+
+## Troubleshooting
+
+### Balances not showing
+
+- Click the refresh icon in the portfolio summary
+- Ensure you sent tokens to the correct account address
+- Check the transaction on the blockchain explorer
+- Wait for blockchain confirmations (can take several minutes)
+
+### Address won't copy
+
+- Try clicking the Copy button again
+- Manually select and copy the address text
+- Check your browser's clipboard permissions
+
+### Portfolio value is $0.00
+
+- You haven't deposited any tokens yet
+- Deposits may still be confirming on-chain
+- Try refreshing balances
+- Check if you sent to the correct address
+
+### Can't see specific token
+
+- Ensure the token is supported by OneBalance
+- Check if the token has a positive balance
+- Try refreshing balances
+- Verify the deposit transaction completed
+
+### Chain distribution not expanding
+
+- Click directly on the chain count text
+- Ensure you have balances on multiple chains
+- Try closing and reopening the wallet dialog
+
+## Logging out
+
+To disconnect your wallet:
+
+<Steps>
+  <Step title="Open wallet dialog">
+    Click your wallet button in the header.
+  </Step>
+
+  <Step title="Scroll to bottom">
+    Find the Logout button at the bottom of the dialog.
+  </Step>
+
+  <Step title="Click Logout">
+    Click the red **Logout** button.
+  </Step>
+
+  <Step title="Confirm logout">
+    Your session ends immediately and you return to the logged-out state.
+  </Step>
+</Steps>
+
+<Note>
+Logging out doesn't affect your funds. You can log back in anytime with the same authentication method to access your wallet.
+</Note>

@@ -1,0 +1,318 @@
+---
+title: Asset Types
+description: Type definitions for aggregated assets and their configurations
+---
+
+## Overview
+
+The Asset types define the structure for representing aggregated assets in OneBalance, which combine the same token across multiple blockchains into a single unified asset.
+
+## Asset
+
+Represents an aggregated asset that spans multiple blockchain networks.
+
+```typescript
+export interface Asset {
+  aggregatedAssetId: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  aggregatedEntities: AggregatedAssetEntity[];
+}
+```
+
+### Properties
+
+<ResponseField name="aggregatedAssetId" type="string" required>
+  Unique identifier for the aggregated asset
+  
+  Format: `ob:{symbol}` where `ob` stands for OneBalance
+  
+  Examples:
+  - `ob:eth` - Ethereum aggregated across all supported chains
+  - `ob:usdc` - USDC aggregated across all supported chains
+  - `ob:dai` - DAI aggregated across all supported chains
+</ResponseField>
+
+<ResponseField name="symbol" type="string" required>
+  Token symbol in uppercase
+  
+  Examples: `"ETH"`, `"USDC"`, `"DAI"`, `"USDT"`
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Full name of the asset
+  
+  Examples: `"Ethereum"`, `"USD Coin"`, `"Dai Stablecoin"`
+</ResponseField>
+
+<ResponseField name="decimals" type="number" required>
+  Number of decimal places for the token
+  
+  Common values:
+  - `18` - ETH, DAI, and most ERC-20 tokens
+  - `6` - USDC, USDT
+  - `8` - WBTC
+</ResponseField>
+
+<ResponseField name="aggregatedEntities" type="AggregatedAssetEntity[]" required>
+  Array of individual asset instances across different chains. See [AggregatedAssetEntity](#aggregatedassetentity) below.
+</ResponseField>
+
+### Example
+
+```typescript
+const usdcAsset: Asset = {
+  aggregatedAssetId: "ob:usdc",
+  symbol: "USDC",
+  name: "USD Coin",
+  decimals: 6,
+  aggregatedEntities: [
+    {
+      assetType: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      decimals: 6,
+      name: "USD Coin",
+      symbol: "USDC"
+    },
+    {
+      assetType: "eip155:137/erc20:0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+      decimals: 6,
+      name: "USD Coin",
+      symbol: "USDC"
+    },
+    {
+      assetType: "eip155:8453/erc20:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      decimals: 6,
+      name: "USD Coin",
+      symbol: "USDC"
+    }
+  ]
+};
+```
+
+---
+
+## AggregatedAssetEntity
+
+Represents a single instance of an asset on a specific blockchain network.
+
+```typescript
+export interface AggregatedAssetEntity {
+  assetType: string;
+  decimals: number;
+  name: string;
+  symbol: string;
+}
+```
+
+### Properties
+
+<ResponseField name="assetType" type="string" required>
+  CAIP-19 format identifier for the asset on a specific chain
+  
+  Format: `{namespace}:{chainId}/{assetNamespace}:{assetReference}`
+  
+  Examples:
+  - `"eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"` (USDC on Ethereum)
+  - `"eip155:137/slip44:60"` (ETH on Polygon)
+  - `"eip155:42161/erc20:0xff970a61a04b1ca14834a43f5de4533ebddb5cc8"` (USDC on Arbitrum)
+</ResponseField>
+
+<ResponseField name="decimals" type="number" required>
+  Number of decimal places for this specific token instance
+  
+  Note: This should match the aggregated asset's decimals, but is included for completeness
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Full name of the token on this specific chain
+</ResponseField>
+
+<ResponseField name="symbol" type="string" required>
+  Token symbol on this specific chain
+</ResponseField>
+
+### Example
+
+```typescript
+const ethereumUSDC: AggregatedAssetEntity = {
+  assetType: "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  decimals: 6,
+  name: "USD Coin",
+  symbol: "USDC"
+};
+
+const polygonETH: AggregatedAssetEntity = {
+  assetType: "eip155:137/slip44:60",
+  decimals: 18,
+  name: "Ethereum",
+  symbol: "ETH"
+};
+```
+
+---
+
+## Understanding Aggregated Assets
+
+OneBalance's core feature is asset aggregation - treating the same token across multiple chains as a single unified balance.
+
+### How It Works
+
+<Steps>
+  <Step title="Asset Identification">
+    Each blockchain has its own instance of a token (e.g., USDC on Ethereum, USDC on Polygon, USDC on Base)
+  </Step>
+  
+  <Step title="Aggregation">
+    OneBalance groups these instances under a single aggregated asset ID (e.g., `ob:usdc`)
+  </Step>
+  
+  <Step title="Unified Balance">
+    Users see and interact with a single USDC balance, even though it may be distributed across multiple chains
+  </Step>
+  
+  <Step title="Automatic Routing">
+    When swapping or transferring, OneBalance automatically selects the optimal chain(s) to execute from
+  </Step>
+</Steps>
+
+### Common Aggregated Assets
+
+<Tabs>
+  <Tab title="Stablecoins">
+    <ResponseField name="ob:usdc" type="Asset">
+      USD Coin across Ethereum, Polygon, Base, Optimism, Arbitrum, and more
+    </ResponseField>
+    
+    <ResponseField name="ob:usdt" type="Asset">
+      Tether USD across supported chains
+    </ResponseField>
+    
+    <ResponseField name="ob:dai" type="Asset">
+      Dai Stablecoin across supported chains
+    </ResponseField>
+  </Tab>
+  
+  <Tab title="Native Assets">
+    <ResponseField name="ob:eth" type="Asset">
+      Ethereum across Ethereum Mainnet, Optimism, Arbitrum, Base, Polygon, and more
+    </ResponseField>
+    
+    <ResponseField name="ob:matic" type="Asset">
+      Polygon's native token across supported chains
+    </ResponseField>
+  </Tab>
+  
+  <Tab title="Other Tokens">
+    <ResponseField name="ob:wbtc" type="Asset">
+      Wrapped Bitcoin across supported chains
+    </ResponseField>
+    
+    <ResponseField name="ob:link" type="Asset">
+      Chainlink token across supported chains
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+---
+
+## Usage Examples
+
+### Finding Available Chains for an Asset
+
+```typescript
+import { Asset } from './types/assets';
+
+function getAvailableChains(asset: Asset): string[] {
+  return asset.aggregatedEntities.map(entity => {
+    // Extract chain ID from CAIP-19 format
+    // e.g., "eip155:1/erc20:0x..." -> "1"
+    const chainPart = entity.assetType.split('/')[0]; // "eip155:1"
+    return chainPart.split(':')[1]; // "1"
+  });
+}
+
+const asset: Asset = await fetchAsset('ob:usdc');
+const chains = getAvailableChains(asset);
+console.log(`USDC is available on chains: ${chains.join(', ')}`);
+// Output: USDC is available on chains: 1, 137, 8453, 10, 42161
+```
+
+### Getting Contract Address for a Specific Chain
+
+```typescript
+function getContractAddress(asset: Asset, chainId: string): string | null {
+  const entity = asset.aggregatedEntities.find(e => {
+    const entityChainId = e.assetType.split(':')[1].split('/')[0];
+    return entityChainId === chainId;
+  });
+  
+  if (!entity) return null;
+  
+  // Extract contract address from CAIP-19 format
+  // e.g., "eip155:1/erc20:0xa0b86991..." -> "0xa0b86991..."
+  const assetRef = entity.assetType.split(':')[2];
+  return assetRef || null;
+}
+
+const usdcAsset: Asset = await fetchAsset('ob:usdc');
+const ethereumAddress = getContractAddress(usdcAsset, '1');
+console.log(`USDC on Ethereum: ${ethereumAddress}`);
+// Output: USDC on Ethereum: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+```
+
+### Checking if Asset is Available on a Chain
+
+```typescript
+function isAssetOnChain(asset: Asset, chainId: string): boolean {
+  return asset.aggregatedEntities.some(entity => {
+    const entityChainId = entity.assetType.split(':')[1].split('/')[0];
+    return entityChainId === chainId;
+  });
+}
+
+const ethAsset: Asset = await fetchAsset('ob:eth');
+console.log(`ETH on Ethereum: ${isAssetOnChain(ethAsset, '1')}`);
+console.log(`ETH on Solana: ${isAssetOnChain(ethAsset, '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')}`);
+// Output:
+// ETH on Ethereum: true
+// ETH on Solana: false
+```
+
+### Formatting Asset Amounts
+
+```typescript
+function formatAssetAmount(amount: string, asset: Asset): string {
+  const value = BigInt(amount);
+  const divisor = BigInt(10 ** asset.decimals);
+  const whole = value / divisor;
+  const fraction = value % divisor;
+  
+  const fractionStr = fraction.toString().padStart(asset.decimals, '0');
+  
+  // Remove trailing zeros from fraction
+  const trimmedFraction = fractionStr.replace(/0+$/, '');
+  
+  if (trimmedFraction === '') {
+    return `${whole} ${asset.symbol}`;
+  }
+  
+  return `${whole}.${trimmedFraction} ${asset.symbol}`;
+}
+
+const usdcAsset: Asset = { 
+  aggregatedAssetId: 'ob:usdc',
+  symbol: 'USDC',
+  decimals: 6,
+  /* ... */
+};
+
+console.log(formatAssetAmount('1000000', usdcAsset));
+// Output: 1 USDC
+
+console.log(formatAssetAmount('1500000', usdcAsset));
+// Output: 1.5 USDC
+
+console.log(formatAssetAmount('1234567890', usdcAsset));
+// Output: 1234.56789 USDC
+```

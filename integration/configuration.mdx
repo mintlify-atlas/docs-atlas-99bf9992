@@ -1,0 +1,237 @@
+---
+title: Configuration
+description: Configure environment variables and API credentials for OneBalance and Privy integrations
+---
+
+Proper configuration is essential for connecting to the OneBalance API and enabling Privy authentication. This guide covers all required environment variables and configuration options.
+
+## Environment variables
+
+Create a `.env` file in your project root with the following variables:
+
+```bash .env
+NEXT_PUBLIC_API_URL=https://be.onebalance.io
+NEXT_PUBLIC_API_KEY=your_onebalance_api_key
+NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+```
+
+<Note>
+  All environment variables are prefixed with `NEXT_PUBLIC_` to make them accessible in the browser. This is required for client-side API calls.
+</Note>
+
+### Required variables
+
+<ParamField path="NEXT_PUBLIC_API_URL" type="string" required>
+  The base URL for the OneBalance API. Use `https://be.onebalance.io` for production.
+  
+  **Example**: `https://be.onebalance.io`
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_API_KEY" type="string" required>
+  Your OneBalance API key for authentication. Obtain this from the [OneBalance Dashboard](https://onebalance.io).
+  
+  **Format**: 64-character hexadecimal string
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_PRIVY_APP_ID" type="string" required>
+  Your Privy application ID for wallet authentication. Get this from the [Privy Dashboard](https://dashboard.privy.io).
+  
+  **Format**: `cm[a-z0-9]+`
+</ParamField>
+
+## API configuration
+
+The application uses a proxy pattern to securely handle API requests. API credentials are managed in `lib/constants.ts`:
+
+```typescript lib/constants.ts
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://be.onebalance.io';
+export const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+```
+
+### API route handler
+
+All OneBalance API calls are proxied through a Next.js API route at `app/api/[...path]/route.ts`. This pattern:
+
+- Centralizes API key management
+- Adds authentication headers automatically
+- Handles errors consistently
+- Supports both GET and POST requests
+
+<CodeGroup>
+```typescript GET requests
+export async function GET(request: NextRequest, { params }) {
+  const { path } = await params;
+  const pathString = path.join('/');
+  const searchParams = request.nextUrl.searchParams;
+
+  const apiUrl = new URL(`/api/${pathString}`, API_BASE_URL);
+  searchParams.forEach((value, key) => {
+    apiUrl.searchParams.append(key, value);
+  });
+
+  const response = await fetch(apiUrl.toString(), {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+  });
+
+  const data = await response.json();
+  return NextResponse.json(data);
+}
+```
+
+```typescript POST requests
+export async function POST(request: NextRequest, { params }) {
+  const { path } = await params;
+  const pathString = path.join('/');
+  const body = await request.json();
+
+  const response = await fetch(`${API_BASE_URL}/api/${pathString}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json();
+  return NextResponse.json(data);
+}
+```
+</CodeGroup>
+
+## Provider configuration
+
+All application providers are configured in `app/providers.tsx`. This includes:
+
+```typescript app/providers.tsx
+import { PrivyProvider } from '@privy-io/react-auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { PredictedAddressProvider } from '@/lib/contexts/PredictedAddressContext';
+
+const queryClient = new QueryClient();
+
+export const Providers = ({ children }: ProvidersProps) => (
+  <PlausibleProvider domain="onebalance-chain-abstracted-swap.vercel.app">
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryClientProvider client={queryClient}>
+        <PrivyProvider
+          appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
+          config={{
+            embeddedWallets: {
+              createOnLogin: 'users-without-wallets',
+            },
+            loginMethods: ['email', 'passkey', 'wallet'],
+            appearance: {
+              theme: 'light',
+              accentColor: '#FFAB40',
+            },
+          }}
+        >
+          <PredictedAddressProvider>
+            {children}
+          </PredictedAddressProvider>
+        </PrivyProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  </PlausibleProvider>
+);
+```
+
+### Provider hierarchy
+
+The providers are nested in this order:
+
+<Steps>
+  <Step title="PlausibleProvider">
+    Analytics tracking for user interactions
+  </Step>
+  
+  <Step title="ThemeProvider">
+    Light/dark theme management with system detection
+  </Step>
+  
+  <Step title="QueryClientProvider">
+    TanStack Query for async state management
+  </Step>
+  
+  <Step title="PrivyProvider">
+    Web3 authentication and wallet management
+  </Step>
+  
+  <Step title="PredictedAddressProvider">
+    OneBalance account address prediction
+  </Step>
+</Steps>
+
+## Axios client configuration
+
+The base API client is configured in `lib/api.ts` to use the Next.js API proxy:
+
+```typescript lib/api.ts
+import axios from 'axios';
+
+export const apiClient = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+```
+
+<Note>
+  The `baseURL` is set to `/api` to route through the Next.js API handler, which adds authentication headers automatically.
+</Note>
+
+## Obtaining API credentials
+
+### OneBalance API key
+
+1. Visit the [OneBalance Dashboard](https://onebalance.io)
+2. Sign up or log in to your account
+3. Navigate to **API Keys** section
+4. Generate a new API key for your application
+5. Copy the key and add it to your `.env` file
+
+<Warning>
+  Keep your API key secure. Never commit it to version control or expose it in client-side code outside of the Next.js environment variable system.
+</Warning>
+
+### Privy App ID
+
+1. Visit the [Privy Dashboard](https://dashboard.privy.io)
+2. Create a new application or select an existing one
+3. Copy your **App ID** from the settings page
+4. Add it to your `.env` file
+
+## Verify configuration
+
+After setting up your environment variables, verify the configuration:
+
+```bash
+pnpm dev
+```
+
+Check the browser console for:
+- ✅ No authentication errors
+- ✅ Privy wallet provider initializes
+- ✅ API calls to OneBalance succeed
+
+If you see errors, double-check that:
+- All environment variables are set correctly
+- The `.env` file is in the project root
+- You've restarted the development server after adding variables
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="OneBalance API" icon="brackets-curly" href="/integration/onebalance-api">
+    Learn how to use the OneBalance API for chain abstraction
+  </Card>
+  <Card title="Privy wallet" icon="wallet" href="/integration/privy-wallet">
+    Configure Privy for Web3 authentication
+  </Card>
+</CardGroup>

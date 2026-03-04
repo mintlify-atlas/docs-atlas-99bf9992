@@ -1,80 +1,190 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get the OneBalance Chain-Abstracted Swap application running locally in minutes
 ---
 
-## Get started in three steps
+This guide will walk you through cloning, configuring, and running the OneBalance Chain-Abstracted Swap application. You'll perform your first cross-chain token swap in under 10 minutes.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- Node.js 18+ installed
+- pnpm package manager (or npm/yarn)
+- A OneBalance API key ([get one here](https://docs.onebalance.io/api-reference/introduction))
+- A Privy account for Web3 authentication ([sign up here](https://privy.io))
 
-### Step 2: Deploy your changes
+## Installation
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Steps>
+  <Step title="Clone the repository">
+    Clone the project from GitHub to your local machine:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    git clone https://github.com/dzimiks/onebalance-chain-abstracted-swap
+    cd onebalance-chain-abstracted-swap
+    ```
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Install dependencies">
+    Install all required packages using pnpm (or your preferred package manager):
 
-### Step 3: Go live
+    ```bash
+    pnpm install
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    The application uses these key dependencies:
+    - **Next.js 15** with App Router and Turbopack
+    - **Privy** for Web3 authentication and embedded wallets
+    - **Wagmi & Viem** for Ethereum interactions
+    - **Tailwind CSS** with shadcn/ui components
+    - **TanStack Query** for data fetching and caching
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root directory with your API credentials:
+
+    ```bash .env
+    NEXT_PUBLIC_API_URL=https://be.onebalance.io
+    NEXT_PUBLIC_API_KEY=your_onebalance_api_key_here
+    NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id_here
+    ```
+
+    <Note>
+      The example `.env.example` file includes demo credentials. For production use, replace these with your own API keys from [OneBalance](https://docs.onebalance.io) and [Privy](https://privy.io).
+    </Note>
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the application with Turbopack for fast refresh:
+
+    ```bash
+    pnpm dev
+    ```
+
+    The app will be available at `http://localhost:3000`
+  </Step>
+</Steps>
+
+## Your first swap
+
+Once the application is running, follow these steps to execute your first chain-abstracted token swap:
+
+<Steps>
+  <Step title="Connect your wallet">
+    Click **Login** in the top-right corner. You can:
+    - Sign in with email (no wallet needed)
+    - Use a passkey for passwordless login
+    - Connect an existing Web3 wallet
+
+    Privy will automatically create an embedded wallet for you if you don't have one.
+  </Step>
+
+  <Step title="Select tokens">
+    On the Swap page:
+    1. Choose the token you want to **sell** (e.g., USDC)
+    2. Choose the token you want to **buy** (e.g., ETH)
+
+    The application supports 100+ tokens across 15+ blockchains including Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, and more.
+  </Step>
+
+  <Step title="Enter amount">
+    Type the amount you want to swap, or click the percentage buttons (25%, 50%, 75%, 100%) to quickly select a portion of your balance.
+
+    The app will automatically:
+    - Fetch a real-time quote from OneBalance
+    - Show the exchange rate and estimated output
+    - Display any applicable fees
+  </Step>
+
+  <Step title="Review the quote">
+    Check the quote details:
+    - **Exchange rate**: Current rate between the two tokens
+    - **Estimated output**: How much you'll receive
+    - **Expiration**: Quotes are valid for 30 seconds
+
+    <Warning>
+      If the quote expires before you execute, the app will automatically fetch a new one.
+    </Warning>
+  </Step>
+
+  <Step title="Execute the swap">
+    Click **Swap** to execute the transaction. OneBalance will:
+    1. Route your tokens across the optimal chains
+    2. Handle all cross-chain bridging automatically
+    3. Execute the swap at the best available rate
+    4. Deliver tokens to your wallet
+
+    You can track the transaction status in real-time as it progresses through the blockchain.
+  </Step>
+</Steps>
+
+## Available scripts
+
+The project includes several useful scripts defined in `package.json`:
+
+<CodeGroup>
+```bash Development
+# Start dev server with Turbopack
+pnpm dev
+```
+
+```bash Build
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+```bash Code Quality
+# Run ESLint
+pnpm lint
+
+# Auto-fix linting issues
+pnpm lint:fix
+
+# Format code with Prettier
+pnpm format
+```
+</CodeGroup>
+
+## Project structure
+
+Here's an overview of the key directories:
+
+```
+onebalance-chain-abstracted-swap/
+├── app/                    # Next.js App Router pages
+│   ├── (trading)/         # Trading-related pages (swap, transfer, history)
+│   ├── layout.tsx         # Root layout with providers
+│   └── page.tsx           # Home page (redirects to /swap)
+├── components/            # React components
+│   ├── ui/               # shadcn/ui components (Button, Card, etc.)
+│   ├── onboarding/       # Interactive tutorial components
+│   ├── SwapForm.tsx      # Main swap interface
+│   └── TransferForm.tsx  # Token transfer interface
+├── lib/                   # Core utilities and APIs
+│   ├── api/              # OneBalance API client
+│   ├── hooks/            # React hooks for data fetching
+│   ├── types/            # TypeScript type definitions
+│   └── utils/            # Helper functions
+└── public/               # Static assets
+```
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Core Features" icon="sparkles" href="/features">
+    Explore all 8 key features of the application
+  </Card>
+  <Card title="API Integration" icon="plug" href="/core-features/api-integration">
+    Learn how OneBalance API powers chain abstraction
+  </Card>
+  <Card title="Authentication" icon="lock" href="/core-features/authentication">
+    Understand Privy's embedded wallet system
+  </Card>
+  <Card title="Customization" icon="palette" href="/customization/styling">
+    Customize the UI to match your brand
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

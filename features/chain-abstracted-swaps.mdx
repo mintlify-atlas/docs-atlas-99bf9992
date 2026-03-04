@@ -1,0 +1,190 @@
+---
+title: Chain-abstracted swaps
+description: Trade tokens across different blockchains without manual network switching or bridging
+---
+
+Chain-abstracted swaps allow you to exchange tokens across multiple blockchains in a single transaction. You don't need to worry about which network your tokens are on or manually bridge assets between chains.
+
+## How it works
+
+When you perform a swap, OneBalance automatically:
+
+1. Aggregates your balances across all supported chains
+2. Finds the best exchange rate from available liquidity sources
+3. Executes the swap using the optimal route
+4. Delivers the destination tokens to your account
+
+All of this happens behind the scenes without requiring you to switch networks or sign multiple transactions.
+
+## Implementation
+
+The swap feature is built using several key components:
+
+### SwapForm component
+
+The main swap interface is implemented in `components/SwapForm.tsx`. It manages the swap flow from quote retrieval to execution:
+
+```tsx components/SwapForm.tsx
+import { SwapForm } from '@/components/SwapForm';
+import { useAssets, useChains, useQuotes, useBalances } from '@/lib/hooks';
+
+export default function SwapPage() {
+  return (
+    <div className="p-4 flex-1">
+      <SwapForm />
+    </div>
+  );
+}
+```
+
+### Getting quotes
+
+Quotes are fetched using the `useQuotes` hook, which communicates with the OneBalance API:
+
+```typescript lib/hooks/useQuotes.ts
+const { quote, loading, error, getQuote, executeQuote } = useQuotes();
+
+// Request a quote
+await getQuote({
+  fromTokenAmount: '1000000', // Amount in token's smallest unit
+  fromAggregatedAssetId: 'ob:usdc',
+  toAggregatedAssetId: 'ob:eth',
+});
+```
+
+The quote request is structured with account information and asset details:
+
+```typescript lib/types/quote.ts
+interface QuoteRequest {
+  from: {
+    account: {
+      sessionAddress: string;
+      adminAddress: string;
+      accountAddress: string;
+    };
+    asset: {
+      assetId: string;
+    };
+    amount: string;
+  };
+  to: {
+    asset: {
+      assetId: string;
+    };
+  };
+}
+```
+
+### Quote lifecycle
+
+Quotes have a 30-second validity period. The application displays a countdown timer and automatically refreshes the quote when it expires:
+
+```tsx components/QuoteCountdown.tsx
+<QuoteCountdown
+  expirationTimestamp={parseInt(quote.expirationTimestamp)}
+  onExpire={handleQuoteExpire}
+/>
+```
+
+### Executing swaps
+
+Once you have a valid quote, execute it by signing with your embedded wallet:
+
+```typescript
+// The quote is signed using Privy's embedded wallet
+const signedQuote = await signQuote(quote, embeddedWallet);
+
+// Execute the signed quote
+await quotesApi.executeQuote(signedQuote);
+
+// Poll for transaction status
+const status = await quotesApi.getQuoteStatus(quote.id);
+```
+
+## Quote details
+
+Each quote includes detailed information about the swap:
+
+- **Exchange rate**: How much of the destination token you'll receive
+- **Price impact**: The effect of your trade on the market price
+- **Route**: Which chains and liquidity sources will be used
+- **Gas estimation**: Approximate gas costs (covered by the paymaster)
+
+<Note>
+All gas fees are abstracted away through OneBalance's gasless transaction system. You don't need to hold native tokens for gas.
+</Note>
+
+## Balance checking
+
+The swap form automatically validates that you have sufficient balance before allowing execution:
+
+```typescript components/SwapForm.tsx
+const hasSufficientBalance = (amount: string) => {
+  if (!sourceBalance || !selectedSourceAsset || !amount) return false;
+  
+  try {
+    const parsedAmount = parseTokenAmount(amount, selectedSourceAsset.decimals || 18);
+    return BigInt(sourceBalance.balance) >= BigInt(parsedAmount);
+  } catch {
+    return false;
+  }
+};
+```
+
+## Supported assets
+
+You can swap between any assets returned by the `/v1/assets` endpoint. The application dynamically loads available assets:
+
+```typescript lib/hooks/useAssets.ts
+const { assets, loading, error } = useAssets();
+
+// Assets are aggregated across all chains
+// Each asset has a unique aggregatedAssetId like "ob:usdc" or "ob:eth"
+```
+
+## Error handling
+
+The swap interface handles various error states:
+
+- **Insufficient balance**: Button displays "Insufficient Balance"
+- **Expired quote**: Automatically refreshes the quote
+- **Network errors**: Shows error alert with retry option
+- **Invalid amounts**: Validates numeric input in real-time
+
+```tsx
+{error && (
+  <Alert variant="destructive">
+    <TriangleAlert className="h-4 w-4" />
+    <AlertTitle>An error occurred</AlertTitle>
+    <AlertDescription>{error}</AlertDescription>
+  </Alert>
+)}
+```
+
+## Best practices
+
+<Steps>
+  <Step title="Check balances first">
+    Always verify you have sufficient balance before requesting a quote. The application does this automatically but you should check if building custom interfaces.
+  </Step>
+  
+  <Step title="Monitor quote expiration">
+    Quotes expire after 30 seconds. Use the countdown component and refresh quotes when needed.
+  </Step>
+  
+  <Step title="Handle errors gracefully">
+    Network issues can occur. Always implement retry logic and show clear error messages to users.
+  </Step>
+  
+  <Step title="Debounce quote requests">
+    Avoid making too many API calls. The swap form uses a 1-second debounce on amount changes.
+  </Step>
+</Steps>
+
+## API reference
+
+For more details on the quote API endpoints, see:
+
+- [Get Quote](/api/quotes#getquote)
+- [Execute Quote](/api/quotes#executequote)
+- [Get Quote Status](/api/quotes#getquotestatus)

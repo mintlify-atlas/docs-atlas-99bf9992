@@ -1,0 +1,278 @@
+---
+title: "useEmbeddedWallet"
+description: "React hook for accessing the Privy embedded wallet instance"
+---
+
+## Overview
+
+The `useEmbeddedWallet` hook provides access to the user's Privy embedded wallet. It returns the connected wallet instance with the `privy` wallet client type, which is used for signing transactions and managing the user's account.
+
+## Import
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+const useEmbeddedWallet: () => ConnectedWallet | null
+```
+
+## Return Value
+
+<ResponseField name="wallet" type="ConnectedWallet | null">
+  The Privy embedded wallet instance, or `null` if no wallet is connected.
+  
+  <Expandable title="ConnectedWallet Properties">
+    <ResponseField name="address" type="string">
+      The wallet's Ethereum address (e.g., `"0x123...abc"`).
+    </ResponseField>
+    
+    <ResponseField name="walletClientType" type="string">
+      Type of wallet client. For embedded wallets, this is `"privy"`.
+    </ResponseField>
+    
+    <ResponseField name="chainId" type="string">
+      Current chain ID the wallet is connected to.
+    </ResponseField>
+    
+    <ResponseField name="connectorType" type="string">
+      Type of connector used (e.g., `"embedded"`, `"injected"`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+
+function WalletInfo() {
+  const wallet = useEmbeddedWallet();
+
+  if (!wallet) {
+    return <div>No wallet connected</div>;
+  }
+
+  return (
+    <div>
+      <p>Wallet Address: {wallet.address}</p>
+      <p>Chain ID: {wallet.chainId}</p>
+      <p>Wallet Type: {wallet.walletClientType}</p>
+    </div>
+  );
+}
+```
+
+### Check Wallet Connection
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+import { usePrivy } from '@privy-io/react-auth';
+
+function ConnectWallet() {
+  const { authenticated, login } = usePrivy();
+  const wallet = useEmbeddedWallet();
+
+  if (!authenticated) {
+    return (
+      <button onClick={login}>
+        Connect Wallet
+      </button>
+    );
+  }
+
+  if (!wallet) {
+    return <div>Loading wallet...</div>;
+  }
+
+  return (
+    <div>
+      Connected: {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+    </div>
+  );
+}
+```
+
+### Use Wallet in Quote Requests
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+import { useQuotes } from '@/lib/hooks';
+import { usePrivy } from '@privy-io/react-auth';
+
+function SwapForm() {
+  const { authenticated } = usePrivy();
+  const wallet = useEmbeddedWallet();
+  const { getQuote } = useQuotes();
+
+  const handleGetQuote = async () => {
+    if (!authenticated || !wallet) {
+      console.error('Wallet not connected');
+      return;
+    }
+
+    await getQuote({
+      fromTokenAmount: '1000000',
+      fromAggregatedAssetId: 'ob:usdc',
+      toAggregatedAssetId: 'ob:eth'
+    });
+  };
+
+  return (
+    <button
+      onClick={handleGetQuote}
+      disabled={!wallet}
+    >
+      Get Quote
+    </button>
+  );
+}
+```
+
+### Display Wallet Address
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+
+function WalletAddress() {
+  const wallet = useEmbeddedWallet();
+
+  if (!wallet) return null;
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-500 rounded-full" />
+      <span className="font-mono text-sm">
+        {shortenAddress(wallet.address)}
+      </span>
+    </div>
+  );
+}
+```
+
+### Conditional Rendering Based on Wallet
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+
+function TransactionButton() {
+  const wallet = useEmbeddedWallet();
+
+  const handleTransaction = async () => {
+    if (!wallet) {
+      console.error('No wallet available');
+      return;
+    }
+
+    // Proceed with transaction
+    console.log('Executing transaction with wallet:', wallet.address);
+  };
+
+  return (
+    <button
+      onClick={handleTransaction}
+      disabled={!wallet}
+      className={!wallet ? 'opacity-50 cursor-not-allowed' : ''}
+    >
+      {wallet ? 'Execute Transaction' : 'Connect Wallet First'}
+    </button>
+  );
+}
+```
+
+### Wallet Status Indicator
+
+```typescript
+import { useEmbeddedWallet } from '@/lib/hooks';
+import { usePrivy } from '@privy-io/react-auth';
+
+function WalletStatus() {
+  const { authenticated, login, logout } = usePrivy();
+  const wallet = useEmbeddedWallet();
+
+  if (!authenticated) {
+    return (
+      <button onClick={login} className="btn-primary">
+        Login
+      </button>
+    );
+  }
+
+  if (!wallet) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="animate-spin h-4 w-4 border-2 border-primary rounded-full" />
+        <span>Loading wallet...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+      <span className="font-mono">
+        {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+      </span>
+      <button onClick={logout} className="btn-secondary">
+        Disconnect
+      </button>
+    </div>
+  );
+}
+```
+
+## Types
+
+### ConnectedWallet
+
+```typescript
+interface ConnectedWallet {
+  address: string;
+  walletClientType: string;
+  chainId: string;
+  connectorType: string;
+  // ... additional Privy wallet properties
+}
+```
+
+## Notes
+
+- The hook returns the first wallet with `walletClientType === 'privy'`
+- Falls back to the first wallet in the list if no Privy wallet is found
+- Returns `null` if no wallets are connected
+- The wallet is automatically available after Privy authentication
+- The embedded wallet is managed by Privy and doesn't require browser extensions
+- Use this hook whenever you need to access the wallet address or sign transactions
+
+## Implementation Details
+
+The hook is implemented as a simple wrapper around Privy's `useWallets` hook:
+
+```typescript /lib/hooks/useEmbeddedWallet.ts
+import { useWallets } from '@privy-io/react-auth';
+import { ConnectedWallet } from '@privy-io/react-auth';
+
+export const useEmbeddedWallet = (): ConnectedWallet | null => {
+  const { wallets } = useWallets();
+  return wallets.find(wallet => wallet.walletClientType === 'privy') || wallets[0] || null;
+};
+```
+
+## Related Hooks
+
+- [useQuotes](/api/hooks/use-quotes) - Uses embedded wallet for signing quotes
+- [useBalances](/api/hooks/use-balances) - Requires wallet address for balance queries
+
+## See Also
+
+- [Privy Documentation](https://docs.privy.io/) - Official Privy SDK documentation
+- [Authentication](/guide/authentication) - Setting up Privy authentication
+- [Signing Utilities](/api/utilities/signing) - Functions for signing quotes with the wallet

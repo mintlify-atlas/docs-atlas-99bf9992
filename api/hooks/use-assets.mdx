@@ -1,0 +1,321 @@
+---
+title: "useAssets"
+description: "React hook for fetching available assets for swapping and transfers"
+---
+
+## Overview
+
+The `useAssets` hook fetches the list of available assets (tokens) that can be used for swaps and transfers. Assets are automatically loaded when the component mounts and include metadata like symbol, name, decimals, and aggregated entities.
+
+## Import
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+const useAssets: () => {
+  assets: Asset[];
+  loading: boolean;
+  error: string | null;
+}
+```
+
+## Return Values
+
+<ResponseField name="assets" type="Asset[]">
+  Array of available assets. Each asset includes aggregated information across multiple chains.
+  
+  <Expandable title="Asset Properties">
+    <ResponseField name="aggregatedAssetId" type="string">
+      Unique identifier for the aggregated asset (e.g., `"ob:eth"`, `"ob:usdc"`, `"ob:btc"`).
+    </ResponseField>
+    
+    <ResponseField name="symbol" type="string">
+      Asset symbol (e.g., `"ETH"`, `"USDC"`, `"BTC"`).
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Full name of the asset (e.g., `"Ethereum"`, `"USD Coin"`, `"Bitcoin"`).
+    </ResponseField>
+    
+    <ResponseField name="decimals" type="number">
+      Number of decimal places for the asset (typically 18 for ERC-20 tokens, 6 for USDC).
+    </ResponseField>
+    
+    <ResponseField name="aggregatedEntities" type="AggregatedAssetEntity[]">
+      Array of individual asset instances across different chains that make up this aggregated asset.
+      
+      <Expandable title="AggregatedAssetEntity Properties">
+        <ResponseField name="assetType" type="string">
+          CAIP-19 identifier (e.g., `"eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"`).
+        </ResponseField>
+        
+        <ResponseField name="decimals" type="number">
+          Decimals for this specific asset instance.
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Name of the asset on this chain.
+        </ResponseField>
+        
+        <ResponseField name="symbol" type="string">
+          Symbol of the asset on this chain.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="loading" type="boolean">
+  Indicates if assets are currently being fetched. `true` on initial load, `false` after data is loaded or error occurs.
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if asset fetching fails. `null` when no errors.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Usage
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+
+function AssetList() {
+  const { assets, loading, error } = useAssets();
+
+  if (loading) return <div>Loading assets...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <ul>
+      {assets.map(asset => (
+        <li key={asset.aggregatedAssetId}>
+          {asset.name} ({asset.symbol})
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Asset Selector Component
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+import { useState } from 'react';
+
+function AssetSelector() {
+  const { assets, loading } = useAssets();
+  const [selectedAsset, setSelectedAsset] = useState('');
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <select
+      value={selectedAsset}
+      onChange={(e) => setSelectedAsset(e.target.value)}
+    >
+      <option value="">Select an asset</option>
+      {assets.map(asset => (
+        <option key={asset.aggregatedAssetId} value={asset.aggregatedAssetId}>
+          {asset.symbol} - {asset.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
+### Asset Search with Filtering
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+import { useState, useMemo } from 'react';
+
+function AssetSearch() {
+  const { assets, loading } = useAssets();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredAssets = useMemo(() => {
+    if (!searchTerm) return assets;
+    
+    const term = searchTerm.toLowerCase();
+    return assets.filter(asset =>
+      asset.symbol.toLowerCase().includes(term) ||
+      asset.name.toLowerCase().includes(term) ||
+      asset.aggregatedAssetId.toLowerCase().includes(term)
+    );
+  }, [assets, searchTerm]);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <input
+        type="text"
+        placeholder="Search assets..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      
+      <div>
+        {filteredAssets.length === 0 ? (
+          <p>No assets found</p>
+        ) : (
+          filteredAssets.map(asset => (
+            <div key={asset.aggregatedAssetId}>
+              <strong>{asset.symbol}</strong> - {asset.name}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### Get Asset by ID
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+
+function AssetDetails({ assetId }: { assetId: string }) {
+  const { assets, loading } = useAssets();
+
+  const asset = assets.find(a => a.aggregatedAssetId === assetId);
+
+  if (loading) return <div>Loading...</div>;
+  if (!asset) return <div>Asset not found</div>;
+
+  return (
+    <div>
+      <h2>{asset.name}</h2>
+      <p>Symbol: {asset.symbol}</p>
+      <p>Decimals: {asset.decimals}</p>
+      <p>ID: {asset.aggregatedAssetId}</p>
+      
+      <h3>Available on:</h3>
+      <ul>
+        {asset.aggregatedEntities.map((entity, idx) => (
+          <li key={idx}>
+            {entity.name} ({entity.assetType})
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Asset Pair Selection for Swaps
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+import { useState } from 'react';
+import { AssetSelect } from '@/components/AssetSelect';
+
+function SwapAssetPicker() {
+  const { assets, loading, error } = useAssets();
+  const [sourceAsset, setSourceAsset] = useState('ob:usdc');
+  const [targetAsset, setTargetAsset] = useState('ob:eth');
+
+  if (loading) return <div>Loading assets...</div>;
+  if (error) return <div>Error loading assets</div>;
+
+  return (
+    <div>
+      <AssetSelect
+        assets={assets}
+        value={sourceAsset}
+        onValueChange={setSourceAsset}
+        label="From"
+      />
+      
+      <AssetSelect
+        assets={assets}
+        value={targetAsset}
+        onValueChange={setTargetAsset}
+        label="To"
+      />
+    </div>
+  );
+}
+```
+
+### Display Asset with Icon
+
+```typescript
+import { useAssets } from '@/lib/hooks';
+import { findTokenByAggregatedAssetId } from '@/lib/constants';
+
+function AssetDisplay({ assetId }: { assetId: string }) {
+  const { assets } = useAssets();
+  
+  const asset = assets.find(a => a.aggregatedAssetId === assetId);
+  const token = findTokenByAggregatedAssetId(assetId);
+
+  if (!asset) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      {token?.icon && (
+        <img
+          src={token.icon}
+          alt={asset.symbol}
+          className="w-6 h-6 rounded-full"
+        />
+      )}
+      <span className="font-semibold">{asset.symbol}</span>
+      <span className="text-gray-500">{asset.name}</span>
+    </div>
+  );
+}
+```
+
+## Types
+
+### Asset
+
+```typescript
+interface Asset {
+  aggregatedAssetId: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  aggregatedEntities: AggregatedAssetEntity[];
+}
+```
+
+### AggregatedAssetEntity
+
+```typescript
+interface AggregatedAssetEntity {
+  assetType: string;
+  decimals: number;
+  name: string;
+  symbol: string;
+}
+```
+
+## Notes
+
+- Assets are fetched automatically when the component mounts
+- The hook only fetches assets once per mount (no automatic refetching)
+- Asset IDs use the format `ob:<symbol>` (e.g., `ob:eth`, `ob:usdc`)
+- Individual entities use CAIP-19 format for `assetType`
+- The demo may have limited assets; production has 14M+ assets
+
+## Related Hooks
+
+- [useBalances](/api/hooks/use-balances) - Fetch user balances for assets
+- [useQuotes](/api/hooks/use-quotes) - Get swap quotes between assets
+- [useChains](/api/hooks/use-chains) - Get available chains
+
+## See Also
+
+- [Assets API](/api/assets) - Backend API endpoint
+- [Asset Constants](/api/utilities/constants) - Token icons and metadata

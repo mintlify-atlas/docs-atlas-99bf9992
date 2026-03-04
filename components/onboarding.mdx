@@ -1,0 +1,504 @@
+---
+title: 'Onboarding System'
+description: 'Interactive onboarding system with guided tours, tooltips, and contextual help for new users'
+---
+
+## Overview
+
+The OneBalance onboarding system provides a comprehensive user education experience through multiple components working together:
+
+- **OnboardingProvider**: Context provider for managing onboarding state
+- **WelcomeModal**: Multi-slide welcome experience for first-time users
+- **OnboardingTooltip**: Interactive tooltips that guide users through key features
+- **ContextualHelp**: Hover/click help icons for specific features
+- **HelpMenu**: Centralized help and support menu
+
+## Components
+
+### OnboardingProvider
+
+The context provider that manages all onboarding state and provides methods to control the tour.
+
+#### Import
+
+```tsx
+import { OnboardingProvider, useOnboarding } from '@/components/onboarding/OnboardingProvider';
+```
+
+#### Setup
+
+```tsx App Setup
+import { OnboardingProvider } from '@/components/onboarding/OnboardingProvider';
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
+
+function App() {
+  return (
+    <OnboardingProvider>
+      <WelcomeModal />
+      <OnboardingTooltip />
+      
+      {/* Your app content */}
+    </OnboardingProvider>
+  );
+}
+```
+
+#### Hook API
+
+```typescript
+const {
+  state,                    // Current onboarding state
+  startOnboarding,          // Begin the guided tour
+  nextStep,                 // Move to next step
+  prevStep,                 // Move to previous step
+  completeStep,             // Mark a step as completed
+  skipOnboarding,           // Skip/exit the tour
+  markActionCompleted,      // Track completed user actions
+  shouldShowHelp,           // Check if help should be shown
+  resetOnboarding           // Reset to initial state
+} = useOnboarding();
+```
+
+#### State Interface
+
+```typescript
+interface OnboardingState {
+  isActive: boolean;               // Whether tour is currently active
+  currentStep: number;             // Current step index
+  steps: OnboardingStep[];         // Array of all steps
+  hasSeenWelcome: boolean;         // Whether user has seen welcome modal
+  completedActions: Set<string>;   // Set of completed action IDs
+}
+
+interface OnboardingStep {
+  id: string;                      // Unique step identifier
+  title: string;                   // Step title
+  description: string;             // Step description text
+  target: string;                  // CSS selector for target element
+  position: 'top' | 'bottom' | 'left' | 'right';  // Tooltip position
+  action?: 'click' | 'hover' | 'focus';  // Expected user action
+  completed: boolean;              // Whether step is completed
+}
+```
+
+---
+
+### WelcomeModal
+
+A multi-slide modal that greets first-time users and introduces key features.
+
+#### Import
+
+```tsx
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+```
+
+#### Features
+
+- **4 informational slides**: Welcome, features, security, chain-abstraction
+- **Auto-detection**: Only shows to first-time users
+- **Route-aware**: Adapts tour based on current page (swap vs transfer)
+- **LocalStorage persistence**: Remembers if user has seen it
+
+#### Usage
+
+```tsx
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+
+function Layout() {
+  return (
+    <OnboardingProvider>
+      <WelcomeModal />
+      {/* Rest of app */}
+    </OnboardingProvider>
+  );
+}
+```
+
+#### Slide Content
+
+<Tabs>
+  <Tab title="Welcome">
+    ```
+    ✨ Welcome to OneBalance!
+    Move tokens across different blockchains in seconds, without the complexity.
+    No network switching, no gas worries, just simple transactions.
+    ```
+  </Tab>
+  <Tab title="Speed">
+    ```
+    ⚡ Lightning Fast Transactions
+    Get quotes in real-time and execute transactions in under 30 seconds.
+    We handle all the blockchain complexity for you.
+    ```
+  </Tab>
+  <Tab title="Security">
+    ```
+    🛡️ Secure & Simple
+    Your funds are always secure. We never hold your assets.
+    Login with your email and we'll create everything for you.
+    ```
+  </Tab>
+  <Tab title="Chain Abstraction">
+    ```
+    🌍 Chain-Abstracted Magic
+    Trade across blockchains without ever thinking about which chain you're on.
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+### OnboardingTooltip
+
+Interactive tooltips that guide users through the application step-by-step.
+
+#### Import
+
+```tsx
+import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
+```
+
+#### Features
+
+- **Smart positioning**: Automatically repositions to stay in viewport
+- **Element highlighting**: Highlights target elements during tour
+- **Progress indicator**: Visual progress bar
+- **Navigation controls**: Next, back, and skip buttons
+- **Backdrop overlay**: Dims background to focus attention
+
+#### Target Elements
+
+Add `data-onboarding` attributes to elements you want to highlight:
+
+```tsx
+<div data-onboarding="connect-button">
+  <ConnectButton />
+</div>
+
+<div data-onboarding="from-token">
+  <TokenSelect />
+</div>
+
+<div data-onboarding="amount-input">
+  <AmountInput />
+</div>
+```
+
+#### Swap Tour Steps
+
+```typescript
+const SWAP_ONBOARDING_STEPS = [
+  { id: 'welcome', target: '[data-onboarding="main-card"]' },
+  { id: 'connect-wallet', target: '[data-onboarding="connect-button"]', action: 'click' },
+  { id: 'select-token', target: '[data-onboarding="from-token"]', action: 'click' },
+  { id: 'enter-amount', target: '[data-onboarding="amount-input"]', action: 'focus' },
+  { id: 'select-target', target: '[data-onboarding="to-token"]', action: 'click' },
+  { id: 'review-quote', target: '[data-onboarding="quote-details"]' },
+  { id: 'execute-swap', target: '[data-onboarding="swap-button"]', action: 'click' }
+];
+```
+
+---
+
+### ContextualHelp
+
+Small help icons that show tooltips with detailed explanations.
+
+#### Import
+
+```tsx
+import { ContextualHelp, helpContent } from '@/components/onboarding/ContextualHelp';
+```
+
+#### Props
+
+<ParamField path="title" type="string" required>
+  The title of the help tooltip.
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The detailed explanation text.
+</ParamField>
+
+<ParamField path="type" type="'info' | 'warning' | 'tip' | 'feature'" default="info">
+  The type of help, which affects icon and styling.
+</ParamField>
+
+<ParamField path="trigger" type="'hover' | 'click'" default="hover">
+  How the tooltip is triggered.
+</ParamField>
+
+<ParamField path="position" type="'top' | 'bottom' | 'left' | 'right'" default="top">
+  Preferred tooltip position relative to the trigger.
+</ParamField>
+
+<ParamField path="children" type="React.ReactNode">
+  Custom trigger element. If not provided, uses a default help icon.
+</ParamField>
+
+#### Usage Examples
+
+<CodeGroup>
+```tsx Basic Usage
+import { ContextualHelp } from '@/components/onboarding/ContextualHelp';
+
+function SwapSettings() {
+  return (
+    <div className="flex items-center gap-2">
+      <label>Slippage Tolerance</label>
+      <ContextualHelp
+        title="Slippage Tolerance"
+        content="The maximum price difference you're willing to accept. Higher slippage means your trade is more likely to succeed."
+        type="info"
+      />
+    </div>
+  );
+}
+```
+
+```tsx Using Predefined Content
+import { ContextualHelp, helpContent } from '@/components/onboarding/ContextualHelp';
+
+function GaslessFeature() {
+  return (
+    <div className="flex items-center gap-2">
+      <span>Gasless Transactions</span>
+      <ContextualHelp {...helpContent.gasless} />
+    </div>
+  );
+}
+```
+
+```tsx Warning Type
+import { ContextualHelp } from '@/components/onboarding/ContextualHelp';
+
+function QuoteExpiration() {
+  return (
+    <ContextualHelp
+      title="Quote Expires Soon"
+      content="This quote will expire in 30 seconds. Execute quickly to lock in this rate."
+      type="warning"
+      trigger="click"
+    />
+  );
+}
+```
+
+```tsx Custom Trigger
+import { ContextualHelp } from '@/components/onboarding/ContextualHelp';
+import { InfoIcon } from 'lucide-react';
+
+function CustomHelp() {
+  return (
+    <ContextualHelp
+      title="Custom Feature"
+      content="This is a special feature explanation."
+    >
+      <button className="text-blue-500">
+        <InfoIcon className="h-4 w-4" />
+        Learn More
+      </button>
+    </ContextualHelp>
+  );
+}
+```
+</CodeGroup>
+
+#### Predefined Help Content
+
+The component includes commonly used help content:
+
+```typescript
+export const helpContent = {
+  slippage: {
+    title: 'Slippage Tolerance',
+    content: 'The maximum price difference you\'re willing to accept...',
+    type: 'info'
+  },
+  gasless: {
+    title: 'Gasless Transactions',
+    content: 'We sponsor the blockchain fees for you!...',
+    type: 'tip'
+  },
+  swap: {
+    title: 'Chain-Abstracted Swap',
+    content: 'Seamlessly exchange tokens across different blockchains...',
+    type: 'feature'
+  },
+  aggregatedBalance: {
+    title: 'Aggregated Balance',
+    content: 'Your total token balance across all supported blockchains...',
+    type: 'info'
+  },
+  smartAccount: {
+    title: 'Smart Account',
+    content: 'A more advanced wallet that can automate transactions...',
+    type: 'tip'
+  },
+  quote: {
+    title: 'Quote Expiration',
+    content: 'Prices change quickly in crypto. Our quotes are valid for 30 seconds...',
+    type: 'warning'
+  }
+};
+```
+
+---
+
+### HelpMenu
+
+Centralized help and support menu accessible from anywhere in the app.
+
+#### Import
+
+```tsx
+import { HelpMenu } from '@/components/onboarding/HelpMenu';
+```
+
+#### Features
+
+- **Guided tour restart**: Launch the onboarding tour anytime
+- **Tutorial reset**: Reset progress to see welcome modal again
+- **Quick help cards**: Common questions and answers
+- **External links**: Documentation and community support
+- **Support contact**: Discord and email links
+
+#### Usage
+
+```tsx
+import { HelpMenu } from '@/components/onboarding/HelpMenu';
+
+function Header() {
+  return (
+    <header className="flex items-center justify-between">
+      <Logo />
+      <div className="flex items-center gap-2">
+        <ConnectButton />
+        <HelpMenu />
+      </div>
+    </header>
+  );
+}
+```
+
+#### Quick Help Topics
+
+- **Login**: How to create an account
+- **Make a Swap**: Steps to execute a swap
+- **Chain-Abstracted**: Explanation of multi-chain functionality
+- **Gasless**: Information about sponsored transactions
+
+---
+
+## Complete Integration Example
+
+```tsx Complete App Setup
+import { OnboardingProvider } from '@/components/onboarding/OnboardingProvider';
+import { WelcomeModal } from '@/components/onboarding/WelcomeModal';
+import { OnboardingTooltip } from '@/components/onboarding/OnboardingTooltip';
+import { HelpMenu } from '@/components/onboarding/HelpMenu';
+import { ContextualHelp } from '@/components/onboarding/ContextualHelp';
+
+function App() {
+  return (
+    <OnboardingProvider>
+      {/* Onboarding UI components */}
+      <WelcomeModal />
+      <OnboardingTooltip />
+      
+      <div className="app">
+        <header>
+          <Logo />
+          <HelpMenu />
+        </header>
+        
+        <main>
+          {/* Add data-onboarding attributes to key elements */}
+          <div data-onboarding="main-card">
+            <SwapCard />
+          </div>
+          
+          {/* Use contextual help for complex features */}
+          <div className="settings">
+            <label>Slippage</label>
+            <ContextualHelp
+              title="Slippage Tolerance"
+              content="..."
+              type="info"
+            />
+          </div>
+        </main>
+      </div>
+    </OnboardingProvider>
+  );
+}
+```
+
+## State Persistence
+
+Onboarding state is persisted to localStorage:
+
+```typescript
+interface SavedState {
+  isActive: boolean;
+  currentStep: number;
+  hasSeenWelcome: boolean;
+  completedActions: string[];
+}
+
+// Saved to: localStorage['onebalance-onboarding']
+```
+
+## Customization
+
+### Custom Tour Steps
+
+You can modify the tour steps by editing `OnboardingProvider.tsx`:
+
+```typescript Custom Steps
+const CUSTOM_STEPS: OnboardingStep[] = [
+  {
+    id: 'custom-step',
+    title: 'Your Feature',
+    description: 'Explanation of your feature',
+    target: '[data-onboarding="your-target"]',
+    position: 'bottom',
+    action: 'click',
+    completed: false
+  },
+  // ... more steps
+];
+```
+
+### Styling
+
+All components use Tailwind CSS and support dark mode:
+
+```tsx Custom Styling
+<ContextualHelp
+  className="ml-2"  // Add custom classes
+  title="Custom"
+  content="..."
+/>
+```
+
+## Best Practices
+
+<Tip>
+  Place `data-onboarding` attributes on the actual interactive elements (buttons, inputs) rather than wrapper divs for better highlighting.
+</Tip>
+
+<Note>
+  Keep tooltip descriptions concise (1-2 sentences) for better readability on mobile devices.
+</Note>
+
+<Warning>
+  Don't start the tour automatically on every page load. Let users control when they want guidance via the HelpMenu.
+</Warning>
+
+## Related Components
+
+- [SwapForm](/components/swap-form) - Primary tour target
+- [ConnectButton](/components/connect-button) - Often an early tour step

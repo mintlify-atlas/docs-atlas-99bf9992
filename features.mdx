@@ -1,0 +1,277 @@
+---
+title: Features
+description: Comprehensive overview of the OneBalance Chain-Abstracted Swap application's key capabilities
+---
+
+The OneBalance Chain-Abstracted Swap application provides a complete solution for cross-chain token swaps and transfers. Built with modern Web3 technologies, it abstracts away blockchain complexity to deliver a seamless user experience.
+
+## Overview
+
+This application demonstrates how to build a production-ready chain-abstracted DEX using:
+- **OneBalance API** for cross-chain routing and execution
+- **Privy** for Web3 authentication and embedded wallets
+- **Next.js 15** with React 19 and TypeScript
+- **Tailwind CSS** with shadcn/ui components
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Chain-abstracted swaps" icon="arrow-right-arrow-left" href="/core-features/swap-functionality">
+    Trade tokens across 15+ blockchains without network switching. OneBalance automatically routes transactions through optimal paths and handles all cross-chain complexity.
+  </Card>
+
+  <Card title="Cross-chain transfers" icon="paper-plane" href="/core-features/transfer-functionality">
+    Send tokens to any address on any supported network. Specify the destination chain and recipient—OneBalance handles the bridging automatically.
+  </Card>
+
+  <Card title="Web3 authentication" icon="lock" href="/core-features/authentication">
+    Seamless login with email, passkeys, or existing wallets. Privy creates embedded wallets for users who don't have one, removing onboarding friction.
+  </Card>
+
+  <Card title="Real-time quotes" icon="clock" href="/core-features/swap-functionality#quote-system">
+    Live exchange rates with 30-second validity. The app fetches fresh quotes on every amount change and automatically refreshes expired quotes.
+  </Card>
+
+  <Card title="Portfolio tracking" icon="chart-line" href="/core-features/portfolio-tracking">
+    View aggregated token balances across all supported chains. The portfolio view consolidates multi-chain holdings into a single interface.
+  </Card>
+
+  <Card title="Transaction history" icon="list" href="/core-features/transaction-history">
+    Track all swaps and transfers with real-time status updates. Monitor pending, completed, and failed transactions in one place.
+  </Card>
+
+  <Card title="Interactive onboarding" icon="graduation-cap" href="/core-features/onboarding">
+    Guided tutorials help new users understand the interface. Context-sensitive tooltips and a step-by-step walkthrough make the first swap effortless.
+  </Card>
+
+  <Card title="Dark mode support" icon="moon" href="/customization/styling#theme-system">
+    System-aware theme switching with manual override. The entire UI adapts to user preferences using Tailwind's dark mode utilities.
+  </Card>
+</CardGroup>
+
+## Supported networks
+
+The application supports token swaps and transfers across these blockchains:
+
+<AccordionGroup>
+  <Accordion title="Ethereum Virtual Machine (EVM) chains" icon="ethereum">
+    - **Ethereum Mainnet** (Chain ID: 1)
+    - **Arbitrum One** (Chain ID: 42161)
+    - **Optimism** (Chain ID: 10)
+    - **Base** (Chain ID: 8453)
+    - **Polygon** (Chain ID: 137)
+    - **BNB Chain** (Chain ID: 56)
+    - **Avalanche C-Chain** (Chain ID: 43114)
+    - **Linea** (Chain ID: 59144)
+  </Accordion>
+
+  <Accordion title="Layer 2 & Rollups" icon="layer-group">
+    All major Ethereum L2s are supported including Arbitrum, Optimism, Base, and more. OneBalance handles the bridging between L1 and L2 automatically.
+  </Accordion>
+
+  <Accordion title="Hyperliquid" icon="rocket">
+    Native support for Hyperliquid network (Chain ID: 999) with HYPE token and liquid staking derivatives.
+  </Accordion>
+</AccordionGroup>
+
+## Supported tokens
+
+The app includes 100+ tokens with automatic aggregation across chains:
+
+### Stablecoins
+- **USDC, USDT, DAI** - Major USD stablecoins
+- **USDC.e** - Bridged USDC on multiple chains
+- **FRAX, LUSD, DOLA** - Decentralized stablecoins
+
+### Blue-chip assets
+- **ETH, WETH** - Ethereum and wrapped variants
+- **WBTC, cbBTC, LBTC** - Bitcoin on Ethereum
+- **wstETH, cbETH, rETH** - Liquid staking derivatives
+
+### DeFi tokens
+- **UNI, AAVE, CRV, SNX** - DEX and lending protocol tokens
+- **ARB, OP** - L2 governance tokens
+- **LINK, GRT** - Oracle and indexing tokens
+
+### Memecoins
+- **PEPE, DEGEN, BONK** - Popular community tokens
+- **BRETT, TOSHI, MOG** - Base ecosystem memes
+
+<Note>
+  Token support is defined in `/lib/constants.ts`. You can easily add new tokens by updating the `tokenList` array with the token's aggregated asset ID, symbol, addresses, and decimals.
+</Note>
+
+## Technical highlights
+
+### Quote system
+
+The application implements a sophisticated quote management system:
+
+```typescript lib/hooks/useQuotes.ts
+const getQuote = async (request: SimpleQuoteRequest) => {
+  const quoteRequest: QuoteRequest = {
+    from: {
+      account: {
+        sessionAddress: embeddedWallet.address,
+        adminAddress: embeddedWallet.address,
+        accountAddress: predicted,
+      },
+      asset: { assetId: request.fromAggregatedAssetId },
+      amount: request.fromTokenAmount,
+    },
+    to: {
+      asset: { assetId: request.toAggregatedAssetId },
+      ...(request.recipientAddress && {
+        account: request.recipientAddress,
+      }),
+    },
+  };
+
+  const quote = await quotesApi.getQuote(quoteRequest);
+  return quote;
+};
+```
+
+### Real-time status polling
+
+Transaction status updates every second until completion:
+
+```typescript lib/hooks/useQuotes.ts
+statusPollingRef.current = setInterval(async () => {
+  const statusResponse = await quotesApi.getQuoteStatus(quote.id);
+  setState(prev => ({ ...prev, status: statusResponse }));
+
+  if (statusResponse?.status === 'COMPLETED' || statusResponse?.status === 'FAILED') {
+    clearInterval(statusPollingRef.current);
+  }
+}, 1000);
+```
+
+### Debounced quote fetching
+
+Prevents excessive API calls during user input:
+
+```typescript components/SwapForm.tsx
+const debouncedGetQuote = useCallback(
+  debounce(async request => {
+    await getQuote(request);
+  }, 1000),
+  [getQuote]
+);
+```
+
+## Architecture patterns
+
+### Component composition
+
+The app uses a modular component structure:
+- **Form components** (`SwapForm`, `TransferForm`) manage state and user interactions
+- **UI components** (`TokenInput`, `QuoteDetails`) handle presentation
+- **Layout components** (`Header`, `TabNavigation`) provide structure
+
+### Data fetching
+
+Custom React hooks encapsulate API logic:
+- `useAssets()` - Fetches supported tokens
+- `useChains()` - Loads available networks
+- `useBalances()` - Retrieves user balances
+- `useQuotes()` - Manages quote lifecycle
+- `useTransactionHistory()` - Tracks transaction history
+
+### State management
+
+- **React Query** for server state and caching
+- **React Context** for global state (onboarding, predicted address)
+- **Local state** for form inputs and UI interactions
+
+### Type safety
+
+Full TypeScript coverage with strict types:
+- API response types in `/lib/types/`
+- Component prop types throughout
+- Type-safe API client methods
+
+## User experience features
+
+### Intelligent balance checking
+
+The swap form validates balances before fetching quotes:
+
+```typescript components/SwapForm.tsx
+const hasSufficientBalance = (amount: string) => {
+  if (!sourceBalance || !selectedSourceAsset || !amount) return false;
+
+  try {
+    const parsedAmount = parseTokenAmount(amount, selectedSourceAsset.decimals || 18);
+    return BigInt(sourceBalance.balance) >= BigInt(parsedAmount);
+  } catch {
+    return false;
+  }
+};
+```
+
+### Percentage buttons
+
+Quickly select portions of your balance:
+- **25%** - Quarter of balance
+- **50%** - Half of balance
+- **75%** - Three-quarters
+- **100%** - Maximum (full balance)
+
+### Quote countdown timer
+
+30-second countdown shows quote validity with visual progress bar. When expired, the app automatically fetches a fresh quote.
+
+### Responsive design
+
+Fully responsive layout works on:
+- Desktop (1024px+)
+- Tablet (768px - 1023px)
+- Mobile (320px - 767px)
+
+## Security features
+
+<Card title="Non-custodial architecture" icon="shield-check">
+  Users maintain full control of their funds. Privy's embedded wallets are encrypted client-side, and private keys never leave the user's device.
+</Card>
+
+<Card title="Quote signing" icon="signature">
+  All quotes are cryptographically signed before execution. This prevents quote manipulation and ensures transaction integrity.
+</Card>
+
+<Card title="Address validation" icon="check-circle">
+  Transfer destinations are validated to ensure proper Ethereum address format before submission.
+</Card>
+
+## Performance optimizations
+
+- **Turbopack** for fast development refresh
+- **Debounced API calls** to reduce network requests
+- **React Query caching** to minimize redundant fetches
+- **Optimistic UI updates** for instant feedback
+- **Code splitting** via Next.js App Router
+
+## Accessibility
+
+- Semantic HTML structure
+- Keyboard navigation support
+- ARIA labels on interactive elements
+- Screen reader-friendly error messages
+- High contrast mode support
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Swap Functionality" icon="arrow-right-arrow-left" href="/core-features/swap-functionality">
+    Deep dive into how token swaps work
+  </Card>
+  <Card title="Transfer Functionality" icon="paper-plane" href="/core-features/transfer-functionality">
+    Learn about cross-chain transfers
+  </Card>
+  <Card title="API Integration" icon="plug" href="/core-features/api-integration">
+    Integrate OneBalance API in your app
+  </Card>
+  <Card title="Customization" icon="palette" href="/customization/styling">
+    Customize the UI and branding
+  </Card>
+</CardGroup>

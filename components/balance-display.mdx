@@ -1,0 +1,281 @@
+---
+title: BalanceDisplay
+description: Display user wallet balances with support for loading states, error handling, and asset-specific balance filtering.
+---
+
+## Overview
+
+The `BalanceDisplay` component provides a clean, card-based interface for displaying wallet balance information. It handles loading and error states gracefully and can optionally show the balance for a specific selected asset.
+
+## Import
+
+```tsx
+import { BalanceDisplay } from '@/components/BalanceDisplay';
+```
+
+## Props
+
+<ParamField path="balances" type="BalancesResponse | null" required>
+  The balance data returned from the `useBalances` hook. Contains total balance and per-asset breakdown.
+</ParamField>
+
+<ParamField path="loading" type="boolean" required>
+  Indicates whether balance data is currently being fetched. Shows skeleton loaders when `true`.
+</ParamField>
+
+<ParamField path="error" type="string | null" required>
+  Error message to display if balance fetching fails. Shows an error alert when present.
+</ParamField>
+
+<ParamField path="selectedAssetId" type="string" default="undefined">
+  Optional aggregated asset ID (e.g., `"ob:usdc"`) to display a specific asset's balance alongside the total.
+</ParamField>
+
+## Type Definitions
+
+```tsx
+interface BalanceDisplayProps {
+  balances: any; // BalancesResponse from API
+  loading: boolean;
+  error: string | null;
+  selectedAssetId?: string;
+}
+
+// BalancesResponse structure
+interface BalancesResponse {
+  totalBalance: {
+    fiatValue: number;
+  };
+  balanceByAggregatedAsset: BalanceByAssetDto[];
+}
+
+interface BalanceByAssetDto {
+  aggregatedAssetId: string; // e.g., "ob:usdc"
+  balance: string; // BigInt as string
+  fiatValue: number;
+  individualAssetBalances: IndividualAssetBalance[];
+}
+```
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { BalanceDisplay } from '@/components/BalanceDisplay';
+import { useBalances } from '@/lib/hooks/useBalances';
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+
+export default function WalletPage() {
+  const { predictedAddress } = usePredictedAddress();
+  const { balances, loading, error } = useBalances(predictedAddress);
+
+  return (
+    <BalanceDisplay
+      balances={balances}
+      loading={loading}
+      error={error}
+    />
+  );
+}
+```
+
+### With Selected Asset
+
+```tsx
+import { useState } from 'react';
+import { BalanceDisplay } from '@/components/BalanceDisplay';
+import { useBalances } from '@/lib/hooks/useBalances';
+
+export default function AssetSelector() {
+  const [selectedAsset, setSelectedAsset] = useState('ob:usdc');
+  const { balances, loading, error } = useBalances(predictedAddress);
+
+  return (
+    <div>
+      <AssetSelect onChange={setSelectedAsset} value={selectedAsset} />
+      <BalanceDisplay
+        balances={balances}
+        loading={loading}
+        error={error}
+        selectedAssetId={selectedAsset}
+      />
+    </div>
+  );
+}
+```
+
+## Component States
+
+<Tabs>
+  <Tab title="Loading">
+    Displays skeleton loaders while fetching data:
+    
+    ```tsx
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-10 w-full" />
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Error">
+    Shows an error alert when balance fetching fails:
+    
+    ```tsx
+    <Alert variant="destructive">
+      <p className="text-sm">Error loading balances: {error}</p>
+    </Alert>
+    ```
+  </Tab>
+  
+  <Tab title="Success">
+    Displays balance information in a card:
+    
+    ```tsx
+    <Card className="p-4">
+      <div className="flex justify-between">
+        <h3>Total Balance</h3>
+        <span>$1,234.56</span>
+      </div>
+      {/* Selected asset info if provided */}
+    </Card>
+    ```
+  </Tab>
+  
+  <Tab title="No Data">
+    Returns `null` when no balance data is available (not loading, no error):
+    
+    ```tsx
+    if (!balances) {
+      return null;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Features
+
+### Total Balance Display
+
+The component always shows the total portfolio value in USD:
+
+```tsx
+<div className="flex justify-between items-center">
+  <h3 className="text-sm font-medium">Total Balance</h3>
+  <span className="font-medium">
+    ${balances.totalBalance?.fiatValue.toFixed(2)}
+  </span>
+</div>
+```
+
+### Selected Asset Details
+
+When `selectedAssetId` is provided, the component displays additional information:
+
+- Asset symbol (extracted from the aggregated asset ID)
+- Token balance (converted from wei using 18 decimals)
+- USD value of the selected asset
+
+```tsx
+{selectedBalance && (
+  <div className="flex justify-between mt-2 border-t pt-2">
+    <h3 className="text-sm font-medium">Selected Asset</h3>
+    <div className="text-right">
+      <div className="font-medium">
+        {parseFloat(selectedBalance.balance) / 10 ** 18}{' '}
+        {selectedBalance.aggregatedAssetId.split(':')[1]}
+      </div>
+      <div className="text-xs text-gray-500">
+        ${selectedBalance.fiatValue?.toFixed(2)}
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### Balance Calculation
+
+The component finds the selected asset's balance using the aggregated asset ID:
+
+```tsx
+let selectedBalance = null;
+if (selectedAssetId && balances.balanceByAggregatedAsset) {
+  selectedBalance = balances.balanceByAggregatedAsset.find(
+    (b: any) => b.aggregatedAssetId === selectedAssetId
+  );
+}
+```
+
+## Styling
+
+The component uses a card layout with consistent spacing:
+
+- Card padding: `p-4`
+- Vertical spacing: `space-y-2`
+- Border between sections: `border-t pt-2 mt-2`
+- Text sizes: `text-sm` for labels, `text-xs` for secondary info
+
+## Data Format
+
+### Fiat Value Formatting
+
+All fiat values are displayed with exactly 2 decimal places:
+
+```tsx
+${value.toFixed(2)}
+```
+
+### Token Amount Formatting
+
+Token balances are stored as strings representing wei (BigInt) and converted for display:
+
+```tsx
+{parseFloat(selectedBalance.balance) / 10 ** 18}
+```
+
+<Warning>
+  The component currently hardcodes 18 decimals for token conversion. This works for most ERC20 tokens but may not be accurate for tokens with different decimal places (e.g., USDC uses 6 decimals).
+</Warning>
+
+## Integration with Hooks
+
+The component is designed to work seamlessly with the `useBalances` hook:
+
+```tsx
+const { balances, loading, error } = useBalances(predictedAddress);
+
+<BalanceDisplay
+  balances={balances}
+  loading={loading}
+  error={error}
+/>
+```
+
+## Accessibility
+
+- Semantic HTML with proper heading levels (`h3`)
+- Clear visual hierarchy with font weights and sizes
+- Error messages are announced to screen readers via the Alert component
+- Loading states prevent confusion during data fetching
+
+## Related Components
+
+- [AssetList](/components/asset-list) - Detailed asset breakdown with chain distribution
+- [ConnectButton](/components/connect-button) - Wallet connection with balance modal
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always provide loading and error props">
+    The component relies on these props to show appropriate UI states. Never pass static `false` values.
+  </Accordion>
+  
+  <Accordion title="Handle null balances gracefully">
+    The component returns `null` when no data is available, so ensure parent components handle this case.
+  </Accordion>
+  
+  <Accordion title="Use with authentication checks">
+    Only render this component when a user is authenticated and has a wallet address.
+  </Accordion>
+</AccordionGroup>

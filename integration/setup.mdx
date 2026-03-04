@@ -1,0 +1,140 @@
+---
+title: Initial setup
+description: Set up your development environment and install dependencies for the OneBalance Chain-Abstracted Swap application
+---
+
+This guide walks you through setting up your local development environment to build chain-abstracted applications with OneBalance and Privy.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** 18.x or higher
+- **pnpm** package manager (recommended) or npm
+- **Git** for version control
+- A code editor (VS Code recommended)
+
+## Clone the repository
+
+Start by cloning the OneBalance Chain-Abstracted Swap repository:
+
+```bash
+git clone https://github.com/dzimiks/onebalance-chain-abstracted-swap
+cd onebalance-chain-abstracted-swap
+```
+
+## Install dependencies
+
+Install all required packages using pnpm:
+
+```bash
+pnpm install
+```
+
+### Core dependencies
+
+The project includes these essential dependencies:
+
+<CardGroup cols={2}>
+  <Card title="OneBalance" icon="swap">
+    Chain abstraction and token swapping via API integration
+  </Card>
+  <Card title="Privy" icon="wallet">
+    Web3 authentication and embedded wallet management
+  </Card>
+  <Card title="Next.js 15" icon="react">
+    React framework with App Router and TypeScript
+  </Card>
+  <Card title="TanStack Query" icon="database">
+    Asynchronous state management for API calls
+  </Card>
+</CardGroup>
+
+## Project structure
+
+Once installed, your project will have this structure:
+
+```
+onebalance-chain-abstracted-swap/
+├── app/                      # Next.js App Router pages
+│   ├── (trading)/           # Trading interface routes
+│   ├── api/                 # API route handlers
+│   ├── layout.tsx           # Root layout
+│   └── providers.tsx        # App-wide providers
+├── components/              # React components
+│   ├── ui/                  # shadcn UI components
+│   ├── wallet/              # Wallet-related components
+│   └── onboarding/          # User onboarding flow
+├── lib/                     # Core utilities
+│   ├── api/                 # API client functions
+│   ├── hooks/               # Custom React hooks
+│   ├── types/               # TypeScript definitions
+│   └── utils/               # Helper functions
+└── public/                  # Static assets
+```
+
+## Development scripts
+
+The following npm scripts are available in `package.json`:
+
+<CodeGroup>
+```bash Development
+pnpm dev
+```
+
+```bash Production build
+pnpm build
+```
+
+```bash Start production server
+pnpm start
+```
+
+```bash Lint code
+pnpm lint
+```
+
+```bash Format code
+pnpm format
+```
+</CodeGroup>
+
+## Start the development server
+
+After completing the setup, start the development server:
+
+```bash
+pnpm dev
+```
+
+Your application will be available at [http://localhost:3000](http://localhost:3000).
+
+<Warning>
+  Without proper environment variables configured, the application will not function correctly. Make sure to complete the [configuration](/integration/configuration) step before testing.
+</Warning>
+
+## TypeScript configuration
+
+The project uses TypeScript with strict mode enabled. The configuration is defined in `tsconfig.json`:
+
+- **Strict mode**: Enabled for better type safety
+- **Path aliases**: `@/` maps to the root directory for clean imports
+- **JSX**: Configured for React 19
+
+## Next steps
+
+Now that your development environment is set up:
+
+<Steps>
+  <Step title="Configure environment variables">
+    Set up your API keys and credentials in the [configuration](/integration/configuration) section.
+  </Step>
+  
+  <Step title="Integrate OneBalance API">
+    Learn how to use the OneBalance API for chain abstraction in the [OneBalance API](/integration/onebalance-api) guide.
+  </Step>
+  
+  <Step title="Set up Privy authentication">
+    Configure Privy for wallet authentication in the [Privy wallet](/integration/privy-wallet) guide.
+  </Step>
+</Steps>

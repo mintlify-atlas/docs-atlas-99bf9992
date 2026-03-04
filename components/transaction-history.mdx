@@ -1,0 +1,264 @@
+---
+title: 'TransactionHistory'
+description: 'Display paginated transaction history with detailed swap and transfer information'
+---
+
+## Overview
+
+The `TransactionHistory` component provides a comprehensive view of user transactions, including swaps and transfers. It features expandable transaction cards, pagination support, real-time refresh, and detailed chain operation information.
+
+## Import
+
+```tsx
+import { TransactionHistory } from '@/components/TransactionHistory';
+```
+
+## Props
+
+<ParamField path="userAddress" type="string">
+  The user's wallet address. When not provided, the component displays a login prompt.
+</ParamField>
+
+## Features
+
+### Automatic Data Loading
+
+The component automatically fetches transaction history when a `userAddress` is provided using the `useTransactionHistory` hook.
+
+### Transaction Cards
+
+Each transaction displays:
+- **Type badge**: Swap or Transfer
+- **Status badge**: COMPLETED, FAILED, PENDING, or REFUNDED
+- **Token amounts**: With fiat values when available
+- **Timestamp**: Formatted date and time
+- **Expandable details**: Quote ID, chain operations, transaction hashes
+
+### Pagination
+
+Supports infinite scrolling with a "Load More" button when additional transactions are available.
+
+### State Management
+
+- **Loading state**: Spinner during initial load
+- **Empty state**: Helpful message when no transactions exist
+- **Error state**: Alert banner for API failures
+- **Refresh**: Manual refresh button with loading indicator
+
+## Usage Example
+
+<CodeGroup>
+```tsx Basic Usage
+import { TransactionHistory } from '@/components/TransactionHistory';
+import { useEmbeddedWallet } from '@/lib/hooks/useEmbeddedWallet';
+
+function HistoryPage() {
+  const { account } = useEmbeddedWallet();
+  
+  return (
+    <TransactionHistory userAddress={account?.sessionAddress} />
+  );
+}
+```
+
+```tsx In Dashboard
+import { TransactionHistory } from '@/components/TransactionHistory';
+
+function Dashboard({ walletAddress }: { walletAddress?: string }) {
+  return (
+    <div className="space-y-6">
+      <h1>My Dashboard</h1>
+      
+      {/* Other dashboard components */}
+      
+      <TransactionHistory userAddress={walletAddress} />
+    </div>
+  );
+}
+```
+
+```tsx With Custom Container
+import { TransactionHistory } from '@/components/TransactionHistory';
+
+function AccountPage() {
+  const user = useUser();
+  
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+      <TransactionHistory userAddress={user?.address} />
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Transaction Types
+
+### Swap Transactions
+
+Display both origin and destination tokens:
+
+```typescript
+{
+  type: 'SWAP',
+  originToken: {
+    aggregatedAssetId: 'ob:usdc',
+    amount: '100000000', // 100 USDC (6 decimals)
+    fiatValue: '100.00'
+  },
+  destinationToken: {
+    aggregatedAssetId: 'ob:usdt',
+    amount: '99500000', // 99.5 USDT (6 decimals)
+    fiatValue: '99.50'
+  }
+}
+```
+
+### Transfer Transactions
+
+Show single token being transferred:
+
+```typescript
+{
+  type: 'TRANSFER',
+  originToken: {
+    aggregatedAssetId: 'ob:eth',
+    amount: '1000000000000000000', // 1 ETH (18 decimals)
+    fiatValue: '3500.00'
+  },
+  destinationToken: {
+    aggregatedAssetId: 'ob:eth',
+    amount: '1000000000000000000'
+  }
+}
+```
+
+## Expandable Details
+
+When a transaction card is clicked, it expands to show:
+
+<Tabs>
+  <Tab title="Quote ID">
+    ```
+    Quote ID
+    550e8400-e29b-41d4-a716-446655440000
+    ```
+  </Tab>
+  <Tab title="Origin Chain">
+    ```
+    Sold: 100 USDC
+    Network: Ethereum
+    Transaction: 0x1234...5678
+    [View on Explorer →]
+    ```
+  </Tab>
+  <Tab title="Destination Chain">
+    ```
+    Bought: 99.5 USDT
+    Network: Polygon
+    Transaction: 0xabcd...efgh
+    [View on Explorer →]
+    ```
+  </Tab>
+</Tabs>
+
+## Status Indicators
+
+<CardGroup cols={2}>
+  <Card title="COMPLETED" icon="check-circle">
+    Green badge with checkmark icon
+  </Card>
+  <Card title="FAILED" icon="x-circle">
+    Red badge with X icon
+  </Card>
+  <Card title="PENDING" icon="clock">
+    Yellow badge with clock icon
+  </Card>
+  <Card title="REFUNDED" icon="alert-triangle">
+    Orange badge with warning icon
+  </Card>
+</CardGroup>
+
+## Data Hook
+
+The component uses `useTransactionHistory` which provides:
+
+```typescript
+const {
+  transactions,      // Array of Transaction objects
+  loading,           // Boolean loading state
+  error,             // Error message or null
+  hasMore,           // Boolean indicating more pages available
+  loadMore,          // Function to load next page
+  refresh,           // Function to refresh from start
+  loadInitial        // Function to reset and reload
+} = useTransactionHistory(userAddress);
+```
+
+## Token Amount Formatting
+
+The component intelligently formats token amounts:
+
+- Very small amounts (`< 0.000001`): Exponential notation
+- Small amounts (`< 0.01`): 6 decimal places
+- Medium amounts (`< 1`): 4 decimal places
+- Standard amounts (`< 1000`): 2 decimal places
+- Large amounts (`>= 1000`): Abbreviated with K/M suffix
+
+## Responsive Design
+
+The component adapts to different screen sizes:
+- **Mobile**: Stacked layout with smaller text
+- **Tablet/Desktop**: Side-by-side layout with full details
+- **Touch-friendly**: Expandable cards for easy interaction
+
+## Integration with Other Hooks
+
+```tsx
+import { TransactionHistory } from '@/components/TransactionHistory';
+import { useAssets } from '@/lib/hooks/useAssets';
+import { useEmbeddedWallet } from '@/lib/hooks/useEmbeddedWallet';
+
+function HistoryWithContext() {
+  const { account } = useEmbeddedWallet();
+  const { assets } = useAssets(); // Used internally by component
+  
+  return <TransactionHistory userAddress={account?.sessionAddress} />;
+}
+```
+
+## Styling
+
+The component uses:
+- `Card` for containers and individual transactions
+- `Badge` for transaction type and status
+- `Button` for actions (refresh, load more)
+- `Alert` for error messages
+- `Collapsible` for expandable transaction details
+
+## Performance
+
+- **Lazy loading**: Loads 10 transactions at a time by default
+- **Optimized rendering**: Uses React keys for efficient updates
+- **State persistence**: Maintains scroll position during pagination
+
+## Related Components
+
+- [TransactionStatus](/components/transaction-status) - Display active transaction status
+- [SwapForm](/components/swap-form) - Create swap transactions
+- [TransferForm](/components/transfer-form) - Create transfer transactions
+
+## Notes
+
+<Note>
+  The component automatically refreshes when the `userAddress` prop changes.
+</Note>
+
+<Tip>
+  Use the refresh button to check for new transactions without reloading the entire page.
+</Tip>
+
+<Warning>
+  Ensure the user is authenticated before passing their address, as the API requires valid user credentials.
+</Warning>

@@ -1,0 +1,327 @@
+---
+title: "useQuotes"
+description: "React hook for fetching swap quotes and executing token swaps with real-time transaction status tracking"
+---
+
+## Overview
+
+The `useQuotes` hook manages the complete lifecycle of token swaps, from fetching quotes to executing transactions and monitoring their status. It handles wallet integration, quote expiration, and automatic status polling.
+
+## Import
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+const useQuotes: () => {
+  quote: Quote | null;
+  status: QuoteStatus | null;
+  loading: boolean;
+  error: string | null;
+  isPolling: boolean;
+  predictedAddress: string | null;
+  getPredictedAddress: () => Promise<string | null>;
+  getQuote: (request: SimpleQuoteRequest) => Promise<Quote | void>;
+  executeQuote: () => Promise<void>;
+  resetQuote: () => void;
+}
+```
+
+## Return Values
+
+<ResponseField name="quote" type="Quote | null">
+  The current quote object containing swap details, pricing, and chain operations. `null` when no quote is active.
+</ResponseField>
+
+<ResponseField name="status" type="QuoteStatus | null">
+  Real-time transaction status after quote execution. Updates automatically via polling. Includes transaction hashes and explorer URLs.
+</ResponseField>
+
+<ResponseField name="loading" type="boolean">
+  Indicates if a quote fetch or transaction execution is in progress.
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if quote fetching or execution fails. `null` when no errors.
+</ResponseField>
+
+<ResponseField name="isPolling" type="boolean">
+  Indicates if the hook is actively polling for transaction status updates.
+</ResponseField>
+
+<ResponseField name="predictedAddress" type="string | null">
+  The user's predicted account address (smart contract wallet). Required for balance checks and quote requests.
+</ResponseField>
+
+<ResponseField name="getPredictedAddress" type="() => Promise<string | null>">
+  Async function to fetch the user's predicted account address. Called automatically when needed.
+</ResponseField>
+
+<ResponseField name="getQuote" type="(request: SimpleQuoteRequest) => Promise<Quote | void>">
+  Fetches a new swap quote based on the provided parameters.
+  
+  **Parameters:**
+  
+  <ParamField path="request" type="SimpleQuoteRequest" required>
+    Quote request parameters
+    
+    <Expandable title="SimpleQuoteRequest Properties">
+      <ParamField path="fromTokenAmount" type="string" required>
+        Amount to swap in the smallest unit (wei). Use `parseTokenAmount()` utility to convert from user input.
+      </ParamField>
+      
+      <ParamField path="fromAggregatedAssetId" type="string" required>
+        Source asset identifier (e.g., `"ob:usdc"`, `"ob:eth"`).
+      </ParamField>
+      
+      <ParamField path="toAggregatedAssetId" type="string" required>
+        Destination asset identifier (e.g., `"ob:eth"`, `"ob:usdc"`).
+      </ParamField>
+      
+      <ParamField path="recipientAddress" type="string">
+        Optional recipient address for transfers. Must include chain prefix (e.g., `"eip155:1:0x..."`).
+      </ParamField>
+    </Expandable>
+  </ParamField>
+</ResponseField>
+
+<ResponseField name="executeQuote" type="() => Promise<void>">
+  Executes the current quote. Signs the quote using the embedded wallet and submits it for processing. Automatically starts polling for transaction status.
+  
+  **Requirements:**
+  - User must be authenticated
+  - Quote must exist and not be expired
+  - Embedded wallet must be available
+</ResponseField>
+
+<ResponseField name="resetQuote" type="() => void">
+  Clears the current quote, status, errors, and stops any active polling. Use when canceling a quote or resetting the swap form.
+</ResponseField>
+
+## Usage Examples
+
+### Basic Swap Flow
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+import { parseTokenAmount } from '@/lib/utils/token';
+
+function SwapForm() {
+  const {
+    quote,
+    loading,
+    error,
+    getQuote,
+    executeQuote,
+    resetQuote
+  } = useQuotes();
+
+  const handleGetQuote = async () => {
+    const amount = parseTokenAmount('100', 18); // 100 tokens
+    
+    await getQuote({
+      fromTokenAmount: amount,
+      fromAggregatedAssetId: 'ob:usdc',
+      toAggregatedAssetId: 'ob:eth'
+    });
+  };
+
+  const handleSwap = async () => {
+    await executeQuote();
+  };
+
+  return (
+    <div>
+      <button onClick={handleGetQuote} disabled={loading}>
+        Get Quote
+      </button>
+      
+      {quote && (
+        <>
+          <div>Rate: {quote.destinationToken.amount}</div>
+          <button onClick={handleSwap} disabled={loading}>
+            Execute Swap
+          </button>
+          <button onClick={resetQuote}>Cancel</button>
+        </>
+      )}
+      
+      {error && <div>Error: {error}</div>}
+    </div>
+  );
+}
+```
+
+### With Transaction Status Tracking
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+
+function SwapWithStatus() {
+  const {
+    quote,
+    status,
+    isPolling,
+    executeQuote,
+    resetQuote
+  } = useQuotes();
+
+  useEffect(() => {
+    if (status?.status === 'COMPLETED') {
+      console.log('Swap completed!');
+      // Refresh balances, show success message, etc.
+      resetQuote();
+    }
+  }, [status]);
+
+  return (
+    <div>
+      {isPolling && (
+        <div>
+          Transaction Status: {status?.status}
+          {status?.originChainOperations.map(op => (
+            <a key={op.hash} href={op.explorerUrl} target="_blank">
+              View on Explorer: {op.hash}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Debounced Quote Fetching
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+import { useCallback } from 'react';
+import debounce from 'lodash.debounce';
+
+function SwapForm() {
+  const { getQuote } = useQuotes();
+  const [amount, setAmount] = useState('');
+
+  // Debounce quote fetching to reduce API calls
+  const debouncedGetQuote = useCallback(
+    debounce(async (request) => {
+      await getQuote(request);
+    }, 1000),
+    [getQuote]
+  );
+
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    
+    if (value) {
+      const parsed = parseTokenAmount(value, 18);
+      debouncedGetQuote({
+        fromTokenAmount: parsed,
+        fromAggregatedAssetId: 'ob:usdc',
+        toAggregatedAssetId: 'ob:eth'
+      });
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={amount}
+      onChange={(e) => handleAmountChange(e.target.value)}
+      placeholder="Enter amount"
+    />
+  );
+}
+```
+
+### Quote Expiration Handling
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+
+function QuoteWithExpiration() {
+  const { quote, getQuote } = useQuotes();
+
+  const handleQuoteExpire = async () => {
+    // Re-fetch quote when it expires
+    if (sourceAsset && targetAsset && amount) {
+      await getQuote({
+        fromTokenAmount: amount,
+        fromAggregatedAssetId: sourceAsset,
+        toAggregatedAssetId: targetAsset
+      });
+    }
+  };
+
+  return (
+    <div>
+      {quote && (
+        <QuoteCountdown
+          expirationTimestamp={parseInt(quote.expirationTimestamp)}
+          onExpire={handleQuoteExpire}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+## Types
+
+### Quote
+
+```typescript
+interface Quote {
+  id: string;
+  account: Account;
+  originToken: TokenInfo;
+  destinationToken: TokenInfo;
+  expirationTimestamp: string;
+  tamperProofSignature: string;
+  originChainsOperations: ChainOperation[];
+  destinationChainOperation?: ChainOperation;
+}
+```
+
+### QuoteStatus
+
+```typescript
+interface QuoteStatus {
+  quoteId: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS' | 'REFUNDED';
+  user: string;
+  recipientAccountId: string;
+  originChainOperations: Array<{
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }>;
+  destinationChainOperations: Array<{
+    hash: string;
+    chainId: number;
+    explorerUrl: string;
+  }>;
+}
+```
+
+## Notes
+
+- The hook automatically polls for transaction status every 1 second after execution
+- Polling stops when the transaction reaches `COMPLETED` or `FAILED` status
+- Quote validation checks expiration time before execution
+- Requires Privy authentication and embedded wallet
+- Uses the `PredictedAddressContext` for account management
+
+## Related Hooks
+
+- [useEmbeddedWallet](/api/hooks/use-embedded-wallet) - Get the user's embedded wallet
+- [useBalances](/api/hooks/use-balances) - Fetch user token balances
+- [useAssets](/api/hooks/use-assets) - Get available assets for swapping
+
+## See Also
+
+- [Quote API](/api/quotes) - Backend API for quotes
+- [Swap Tutorial](/guide/swapping-tokens) - Complete swap implementation guide

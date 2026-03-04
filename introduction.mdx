@@ -1,0 +1,232 @@
+---
+title: Introduction
+description: Welcome to OneBalance Chain-Abstracted Swap - a modern application for seamless token swaps and transfers across multiple blockchains
+mode: custom
+---
+
+<div className="relative overflow-hidden bg-gradient-to-br from-[#6366f1] via-[#4f46e5] to-[#4338ca] dark:from-[#4f46e5] dark:via-[#4338ca] dark:to-[#3730a3] py-20">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7 space-y-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+          Chain-Abstracted Token Swaps
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl">
+          Trade and transfer tokens across multiple blockchains without ever thinking about which chain you're on. Powered by OneBalance API and Privy embedded wallets.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 bg-white text-[#6366f1] font-semibold rounded-lg hover:bg-white/90 transition-colors no-underline"
+          >
+            Get Started
+          </a>
+          <a 
+            href="/features" 
+            className="inline-flex items-center px-6 py-3 border border-white/30 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors no-underline"
+          >
+            Explore Features
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-2xl blur-3xl"></div>
+          <div className="relative bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="text-white font-medium">Real-time Quotes</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div className="text-white font-medium">Gasless Transactions</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <div className="text-white font-medium">Cross-chain Transfers</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="space-y-4 mb-12">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
+      Get started in minutes
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl">
+      Follow these steps to start swapping and transferring tokens across chains
+    </p>
+  </div>
+
+  <Steps>
+    <Step title="Clone and install dependencies">
+      Get the project set up on your local machine
+      
+      ```bash
+      git clone https://github.com/dzimiks/onebalance-chain-abstracted-swap
+      cd onebalance-chain-abstracted-swap
+      pnpm install
+      ```
+    </Step>
+    
+    <Step title="Configure environment variables">
+      Create a `.env` file with your API credentials
+      
+      ```bash
+      NEXT_PUBLIC_API_URL=https://be.onebalance.io
+      NEXT_PUBLIC_API_KEY=your_onebalance_api_key
+      NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+      ```
+      
+      <Note>
+        You'll need API keys from [OneBalance](https://www.onebalance.io) and [Privy](https://privy.io) to run the application.
+      </Note>
+    </Step>
+    
+    <Step title="Start the development server">
+      Run the app locally
+      
+      ```bash
+      pnpm dev
+      ```
+      
+      The application will be available at `http://localhost:3000`
+    </Step>
+    
+    <Step title="Connect your wallet and start swapping">
+      Log in with social authentication (no wallet required) and start trading tokens across chains. Privy automatically creates an embedded wallet for seamless onboarding.
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="space-y-4 mb-12">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
+      Explore by topic
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400">
+      Learn about the core features and capabilities
+    </p>
+  </div>
+
+  <CardGroup cols={2}>
+    <Card 
+      title="Chain-abstracted swaps" 
+      icon="repeat" 
+      href="/features/chain-abstracted-swaps"
+    >
+      Trade tokens across blockchains without network switching
+    </Card>
+    <Card 
+      title="Cross-chain transfers" 
+      icon="arrow-right-arrow-left" 
+      href="/features/cross-chain-transfers"
+    >
+      Send tokens to any address on supported networks
+    </Card>
+    <Card 
+      title="Portfolio tracking" 
+      icon="chart-line" 
+      href="/features/portfolio-tracking"
+    >
+      View aggregated balances across all chains
+    </Card>
+    <Card 
+      title="Transaction history" 
+      icon="clock-rotate-left" 
+      href="/features/transaction-history"
+    >
+      Track all swaps and transfers in one place
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="space-y-4 mb-12">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
+      Developer resources
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400">
+      Technical documentation and integration guides
+    </p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <a 
+      href="/integration/setup" 
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27] hover:border-[#6366f1] dark:hover:border-[#6366f1] overflow-hidden transition-colors no-underline"
+    >
+      <div className="h-56 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#242838] dark:to-[#1a1d27]">
+        <svg className="w-24 h-24 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      </div>
+      <div className="p-6 space-y-2">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Integration Guide</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Learn how to set up and configure the application with OneBalance API and Privy</p>
+        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-500 group-hover:text-[#6366f1] transition-colors">
+          <span>Read the guide</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a 
+      href="/api/quotes" 
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27] hover:border-[#6366f1] dark:hover:border-[#6366f1] overflow-hidden transition-colors no-underline"
+    >
+      <div className="h-56 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#242838] dark:to-[#1a1d27]">
+        <svg className="w-24 h-24 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <div className="p-6 space-y-2">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">API Reference</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Explore the complete API documentation for quotes, transactions, and balances</p>
+        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-500 group-hover:text-[#6366f1] transition-colors">
+          <span>Browse the API</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gradient-to-br from-gray-50 to-white dark:from-[#1a1d27] dark:to-[#242838] p-8 sm:p-12">
+    <div className="max-w-2xl">
+      <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+        Ready to start building?
+      </h2>
+      <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
+        Follow the quickstart guide to get your chain-abstracted swap application running in minutes.
+      </p>
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 bg-[#6366f1] text-white font-semibold rounded-lg hover:bg-[#4f46e5] transition-colors no-underline"
+      >
+        Get Started
+      </a>
+    </div>
+  </div>
+</div>

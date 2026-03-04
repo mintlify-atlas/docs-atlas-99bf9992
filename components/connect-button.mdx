@@ -1,0 +1,228 @@
+---
+title: ConnectButton
+description: A comprehensive wallet connection and account management component that handles authentication, balance display, and portfolio overview.
+---
+
+## Overview
+
+The `ConnectButton` component is the primary wallet interface for the OneBalance application. It manages user authentication via Privy, displays the connected wallet address, and provides a detailed account modal with portfolio information, balances across chains, and asset management capabilities.
+
+## Import
+
+```tsx
+import { ConnectButton } from '@/components/ConnectButton';
+```
+
+## Props
+
+The `ConnectButton` component does not accept any props. It manages its own state and relies on global context providers.
+
+<Note>
+  The component requires the following providers to be available in the React tree:
+  - `PrivyProvider` for authentication
+  - `PredictedAddressContext` for account address management
+</Note>
+
+## Features
+
+### Authentication States
+
+The component handles three distinct states:
+
+1. **Loading State**: Displays while Privy is initializing
+2. **Unauthenticated State**: Shows a "Login" button
+3. **Authenticated State**: Shows wallet address and opens account modal
+
+### Account Modal
+
+When authenticated, clicking the button opens a comprehensive account modal that includes:
+
+- **Wallet Header**: Account identifier with formatted address
+- **Account Address**: Full address display with copy functionality
+- **Portfolio Summary**: Total portfolio value, asset count, and chain count
+- **Asset List**: Detailed breakdown of all assets across chains
+- **Logout Button**: Disconnects the wallet
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { Header } from '@/components/Header';
+import { ConnectButton } from '@/components/ConnectButton';
+
+export const Header = () => {
+  return (
+    <header className="flex items-center justify-between p-4">
+      <h1>OneBalance</h1>
+      <ConnectButton />
+    </header>
+  );
+};
+```
+
+### With Onboarding Annotation
+
+```tsx
+<div data-onboarding="connect-button">
+  <ConnectButton />
+</div>
+```
+
+## Component Behavior
+
+### Address Formatting
+
+The component automatically formats wallet addresses for display:
+
+- Full address: `0x1234567890abcdef1234567890abcdef12345678`
+- Displayed as: `0x1234...5678`
+
+This is handled by the internal `formatAddress` function:
+
+```tsx
+const formatAddress = (address?: string) => {
+  if (!address) return 'Unknown';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+```
+
+### Predicted Address Management
+
+The component automatically fetches the predicted account address when a wallet connects:
+
+```tsx
+useEffect(() => {
+  if (authenticated && embeddedWallet && !predictedAddress) {
+    getPredictedAddress();
+  }
+}, [authenticated, embeddedWallet, predictedAddress, getPredictedAddress]);
+```
+
+### Balance Refresh
+
+Balances are automatically refreshed when the account modal is opened:
+
+```tsx
+useEffect(() => {
+  if (open && predictedAddress) {
+    fetchBalances();
+  }
+}, [open, predictedAddress]);
+```
+
+## State Variations
+
+<Tabs>
+  <Tab title="Loading">
+    ```tsx
+    // Shown while Privy is initializing
+    <Button variant="outline" size="sm" disabled className="animate-pulse">
+      <div className="w-4 h-4 bg-gray-300 rounded mr-2"></div>
+      Loading...
+    </Button>
+    ```
+  </Tab>
+  <Tab title="Login">
+    ```tsx
+    // Shown when user is not authenticated
+    <Button size="sm" onClick={login}>
+      <Wallet className="h-4 w-4" />
+      Login
+    </Button>
+    ```
+  </Tab>
+  <Tab title="Connected">
+    ```tsx
+    // Shown when user is authenticated
+    <Button variant="outline" size="sm">
+      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+      <Wallet className="h-4 w-4" />
+      <span>0x1234...5678</span>
+      <ChevronRight className="h-3 w-3" />
+    </Button>
+    ```
+  </Tab>
+</Tabs>
+
+## Dependencies
+
+### Hooks
+
+<ParamField path="usePrivy" type="hook">
+  Provides authentication methods (`login`, `logout`) and state (`authenticated`, `ready`)
+</ParamField>
+
+<ParamField path="useEmbeddedWallet" type="hook">
+  Returns the embedded wallet instance for address derivation
+</ParamField>
+
+<ParamField path="usePredictedAddress" type="hook">
+  Manages the predicted account address state and fetching
+</ParamField>
+
+<ParamField path="useBalances" type="hook">
+  Fetches and manages balance data for the connected account
+</ParamField>
+
+<ParamField path="useAssets" type="hook">
+  Provides asset metadata for display in the asset list
+</ParamField>
+
+### Child Components
+
+The account modal renders several specialized components:
+
+- [`AssetList`](/components/asset-list): Detailed asset breakdown by chain
+
+## Modal Structure
+
+```tsx
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogTrigger asChild>
+    {/* Connect button */}
+  </DialogTrigger>
+  
+  <DialogContent className="sm:max-w-lg max-h-[90vh]">
+    <div className="space-y-6 overflow-y-auto">
+      <WalletHeader address={predictedAddress} />
+      <AccountAddress address={predictedAddress} />
+      <PortfolioSummary
+        totalValue={balances.totalBalance.fiatValue}
+        assetCount={balances.balanceByAggregatedAsset.length}
+        chainCount={uniqueChainCount}
+        onRefresh={fetchBalances}
+      />
+      <AssetList
+        balances={balances.balanceByAggregatedAsset}
+        assets={assets}
+        loading={balancesLoading}
+      />
+    </div>
+    
+    <div className="pt-4 border-t">
+      <Button onClick={logout}>Logout</Button>
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
+## Styling
+
+The component uses Tailwind CSS classes for styling with support for dark mode:
+
+- Connected indicator: `bg-emerald-500 animate-pulse` (pulsing green dot)
+- Button hover effects: `hover:shadow-md transition-all duration-200`
+- Login button: `shadow-lg hover:shadow-xl transform hover:scale-105`
+
+## Accessibility
+
+- Includes a hidden `DialogTitle` for screen readers
+- Proper button semantics with `aria-label` attributes
+- Keyboard navigation support through Dialog component
+- Focus management when modal opens/closes
+
+## Related Components
+
+- [BalanceDisplay](/components/balance-display) - Shows balance information
+- [AssetList](/components/asset-list) - Lists assets with chain breakdown

@@ -1,0 +1,293 @@
+---
+title: Cross-chain transfers
+description: Send tokens to any address on any supported blockchain without bridging
+---
+
+Cross-chain transfers enable you to send tokens to recipients on different blockchains. The recipient doesn't need to be on the same chain as your tokens - OneBalance handles all the cross-chain routing automatically.
+
+## How it works
+
+When you initiate a transfer:
+
+1. Select the token you want to send
+2. Enter the recipient's wallet address
+3. Choose the destination network
+4. Get a quote for the transfer cost
+5. Confirm and execute the transfer
+
+OneBalance bridges your tokens to the destination chain and delivers them to the recipient's address.
+
+## Implementation
+
+### TransferForm component
+
+The transfer interface is implemented in `components/TransferForm.tsx`:
+
+```tsx app/(trading)/transfer/page.tsx
+import { TransferForm } from '@/components/TransferForm';
+import { TabNavigation } from '@/components/TabNavigation';
+
+export default function TransferPage() {
+  return (
+    <div className="p-4 flex-1">
+      <TabNavigation />
+      <TransferForm />
+    </div>
+  );
+}
+```
+
+### Transfer flow
+
+The transfer form manages three key pieces of state:
+
+```typescript components/TransferForm.tsx
+const [selectedAsset, setSelectedAsset] = useState<string>('ob:usdc');
+const [amount, setAmount] = useState<string>('');
+const [recipientAddress, setRecipientAddress] = useState<string>('');
+const [recipientChain, setRecipientChain] = useState<string>('eip155:42161');
+```
+
+### Address validation
+
+The form validates recipient addresses in real-time:
+
+```typescript components/TransferForm.tsx
+const isValidAddress = (address: string): boolean => {
+  return /^0x[a-fA-F0-9]{40}$/.test(address) || address.endsWith('.eth');
+};
+```
+
+<Note>
+Both standard Ethereum addresses (0x...) and ENS names (.eth) are supported for recipients.
+</Note>
+
+### Getting transfer quotes
+
+Transfer quotes work similarly to swap quotes, but include the recipient's address:
+
+```typescript
+await getQuote({
+  fromTokenAmount: parsedAmount,
+  fromAggregatedAssetId: selectedAsset,
+  toAggregatedAssetId: selectedAsset, // Same asset for transfers
+  recipientAddress: `${recipientChain}:${recipientAddress}`,
+});
+```
+
+The recipient address uses the CAIP-10 format: `<chain_id>:<address>`
+
+### Chain selection
+
+Users can select the destination network from all supported chains:
+
+```tsx components/TransferForm.tsx
+<Select
+  value={recipientChain}
+  onValueChange={handleRecipientChainChange}
+  disabled={loading}
+>
+  <SelectTrigger>
+    <SelectValue>
+      {recipientChain && (
+        <div className="flex items-center gap-2">
+          <img
+            src={getChainLogoUrl(extractChainIdFromCAIP(recipientChain))}
+            alt={getChainName(extractChainIdFromCAIP(recipientChain))}
+          />
+          <span>{getChainName(extractChainIdFromCAIP(recipientChain))}</span>
+        </div>
+      )}
+    </SelectValue>
+  </SelectTrigger>
+  <SelectContent>
+    {chains.map(chain => (
+      <SelectItem key={chain.chain.reference} value={chain.chain.chain}>
+        {/* Chain option */}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+## Transfer cost calculation
+
+Transfer quotes include the cost of bridging tokens to the destination chain. This is automatically calculated and displayed to the user before execution.
+
+### Quote details
+
+The quote shows:
+
+- Amount to be sent
+- Destination network
+- Bridge fee (if applicable)
+- Gas cost (covered by paymaster)
+- Estimated delivery time
+
+```tsx
+<QuoteDetails
+  quote={{
+    ...quote,
+    originToken: {
+      ...quote.originToken,
+      amount: formatTokenAmount(
+        quote.originToken.amount,
+        selectedAssetData?.decimals ?? 18
+      ),
+    },
+    destinationToken: {
+      ...quote.destinationToken,
+      amount: formatTokenAmount(
+        quote.destinationToken.amount,
+        selectedAssetData?.decimals ?? 18
+      ),
+    },
+  }}
+/>
+```
+
+## Percentage-based amounts
+
+The transfer form includes quick-select buttons for common percentages:
+
+```typescript components/TransferForm.tsx
+onPercentageClick={percentage => {
+  if (assetBalance && selectedAssetData) {
+    const balance = assetBalance.balance;
+    const decimals = selectedAssetData.decimals || 18;
+    const maxAmount = formatTokenAmount(balance, decimals);
+    const targetAmount = ((parseFloat(maxAmount) * percentage) / 100).toString();
+    
+    setAmount(targetAmount);
+    
+    // Trigger quote with new amount
+    const parsed = parseTokenAmount(targetAmount, decimals);
+    setParsedAmount(parsed);
+  }
+}}
+```
+
+This allows users to quickly select 25%, 50%, 75%, or 100% of their balance.
+
+## Supported networks
+
+You can transfer tokens to any network supported by OneBalance. The list is fetched dynamically:
+
+```typescript lib/hooks/useChains.ts
+const { chains, loading, error } = useChains();
+
+// Chains include Ethereum, Arbitrum, Optimism, Polygon, Base, and more
+```
+
+## Transfer execution
+
+Executing a transfer follows the same pattern as swaps:
+
+1. Get a valid quote with recipient information
+2. Sign the quote with your embedded wallet
+3. Submit the signed quote for execution
+4. Monitor transaction status until completion
+
+```typescript
+const handleTransactionComplete = useCallback(() => {
+  // Clear the form
+  setAmount('');
+  setParsedAmount('');
+  setRecipientAddress('');
+  resetQuote();
+  
+  // Refresh balances after transaction completion
+  if (predictedAddress) {
+    fetchBalances();
+  }
+}, [predictedAddress, fetchBalances, resetQuote]);
+```
+
+## Error states
+
+The transfer form handles several error scenarios:
+
+<AccordionGroup>
+  <Accordion title="Invalid recipient address">
+    Shows an inline error message when the address format is incorrect.
+    
+    ```tsx
+    {recipientAddress && !isValidAddress(recipientAddress) && (
+      <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+        Please enter a valid Ethereum address
+      </div>
+    )}
+    ```
+  </Accordion>
+  
+  <Accordion title="Insufficient balance">
+    Disables the transfer button and shows "Insufficient Balance" text.
+    
+    ```typescript
+    if (amount && !hasSufficientBalance(amount)) {
+      return { disabled: true, text: 'Insufficient Balance' };
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing recipient information">
+    The transfer button remains disabled until both address and chain are selected.
+    
+    ```typescript
+    const isDisabled =
+      !selectedAsset ||
+      !amount ||
+      !recipientAddress ||
+      !isValidAddress(recipientAddress) ||
+      !quote;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Transaction monitoring
+
+After initiating a transfer, the application polls for status updates:
+
+```typescript lib/hooks/useQuotes.ts
+statusPollingRef.current = setInterval(async () => {
+  try {
+    const statusResponse = await quotesApi.getQuoteStatus(quote.id);
+    setState(prev => ({ ...prev, status: statusResponse }));
+    
+    if (statusResponse?.status === 'COMPLETED' || statusResponse?.status === 'FAILED') {
+      clearInterval(statusPollingRef.current);
+      setState(prev => ({ ...prev, loading: false, isPolling: false }));
+    }
+  } catch (err) {
+    // Handle polling errors
+  }
+}, 1000); // Poll every 1 second
+```
+
+## Best practices
+
+<Steps>
+  <Step title="Verify recipient address">
+    Always double-check the recipient address before confirming. Blockchain transactions cannot be reversed.
+  </Step>
+  
+  <Step title="Choose the right network">
+    Consider the recipient's preferred network. Some networks have lower fees or faster confirmation times.
+  </Step>
+  
+  <Step title="Account for bridge time">
+    Cross-chain transfers may take longer than same-chain transactions due to bridge confirmation times.
+  </Step>
+  
+  <Step title="Review transfer costs">
+    Check the quote details to understand any fees associated with the transfer.
+  </Step>
+</Steps>
+
+## API reference
+
+For more details on transfer-related endpoints:
+
+- [Get Quote](/api/quotes#getquote) (with recipient address)
+- [Execute Quote](/api/quotes#executequote)
+- [Get Chains](/api/chains#getchains)

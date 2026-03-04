@@ -1,0 +1,156 @@
+---
+title: Authentication
+description: Learn how to log in and connect your wallet to OneBalance using Privy's embedded wallet solution
+---
+
+OneBalance uses [Privy](https://privy.io) to provide a seamless authentication experience. You can log in with your social accounts or existing wallets without needing to manage private keys or seed phrases.
+
+## Logging in
+
+When you first visit OneBalance, you'll see the main application interface with a **Login** button in the top-right corner.
+
+<Steps>
+  <Step title="Click the Login button">
+    Locate the **Login** button in the header. It displays a wallet icon and the text "Login".
+  </Step>
+
+  <Step title="Choose your login method">
+    Privy will present several authentication options:
+    
+    - **Social accounts**: Google, Twitter, Discord, Apple, etc.
+    - **Email**: Log in with a magic link sent to your email
+    - **Existing wallets**: Connect MetaMask, Coinbase Wallet, WalletConnect, or other supported wallets
+    - **Phone number**: Authenticate via SMS
+    
+    Select your preferred method.
+  </Step>
+
+  <Step title="Complete authentication">
+    Follow the prompts for your chosen method:
+    
+    - For social accounts, authorize OneBalance to access your profile
+    - For email, click the magic link sent to your inbox
+    - For existing wallets, approve the connection request in your wallet
+    - For phone, enter the verification code sent via SMS
+  </Step>
+
+  <Step title="Embedded wallet creation">
+    After successful authentication, Privy automatically creates an embedded wallet for you. This happens behind the scenes - no additional setup required.
+    
+    Your embedded wallet is secured by Privy and linked to your authentication method.
+  </Step>
+</Steps>
+
+<Note>
+If you're logging in for the first time, Privy creates a new embedded wallet automatically. Returning users will connect to their existing embedded wallet.
+</Note>
+
+## Understanding your account address
+
+Once authenticated, the Login button changes to display your connected wallet:
+
+- A **green pulsing dot** indicates you're connected
+- Your **account address** appears in shortened format (e.g., `0x1234...5678`)
+- A **chevron icon** indicates you can click to view wallet details
+
+### Account address vs. session address
+
+OneBalance uses a predicted account address system:
+
+- **Session address**: Your Privy embedded wallet address (used for signing transactions)
+- **Account address**: Your OneBalance smart contract account address (where your funds live)
+
+When you open your wallet details, you'll see your full account address. This is the address you should use to receive funds.
+
+<Tip>
+Copy your account address from the wallet dialog and use it to deposit tokens from exchanges or other wallets.
+</Tip>
+
+## Viewing wallet details
+
+Click on the connected wallet button to open the wallet details dialog:
+
+<Steps>
+  <Step title="Open wallet dialog">
+    Click the wallet button in the header (shows your address and green dot).
+  </Step>
+
+  <Step title="View account information">
+    The dialog displays:
+    
+    - **Wallet Header**: Shows "Your Account" title
+    - **Account Address**: Your full OneBalance account address with a copy button
+    - **Portfolio Summary**: Total portfolio value across all chains
+    - **Asset Balances**: List of all tokens you hold with their values
+  </Step>
+
+  <Step title="Copy your address">
+    Click the **Copy** button next to your account address to copy it to your clipboard.
+    
+    You'll see a confirmation message when the address is copied.
+  </Step>
+
+  <Step title="Refresh balances">
+    Click the refresh icon in the Portfolio Summary section to update your balances.
+    
+    Balances automatically refresh when you open the dialog, but you can manually refresh if needed.
+  </Step>
+</Steps>
+
+## Logging out
+
+To disconnect your wallet and log out:
+
+<Steps>
+  <Step title="Open wallet dialog">
+    Click your wallet button in the header.
+  </Step>
+
+  <Step title="Click Logout">
+    Scroll to the bottom of the wallet dialog and click the red **Logout** button.
+  </Step>
+
+  <Step title="Confirm logout">
+    Your session will end immediately, and you'll return to the logged-out state.
+  </Step>
+</Steps>
+
+<Warning>
+Logging out does not delete your wallet or funds. You can log back in with the same authentication method to access your account.
+</Warning>
+
+## Security considerations
+
+Your embedded wallet is secured by Privy's infrastructure:
+
+- **Private keys** are encrypted and managed by Privy
+- **Authentication** is required for all actions
+- **Transaction signing** happens securely within the embedded wallet
+- **No seed phrases** to manage or lose
+
+<Note>
+Make sure to use a strong authentication method (like Google or email) and enable two-factor authentication on those accounts for maximum security.
+</Note>
+
+## Troubleshooting
+
+### Can't log in
+
+- Ensure you're using a supported browser (Chrome, Firefox, Safari, Edge)
+- Check that third-party cookies are enabled
+- Try a different authentication method
+- Clear your browser cache and try again
+
+### Don't see my balances
+
+- Click the refresh icon in the wallet dialog
+- Ensure you've sent funds to the correct account address
+- Wait a few moments for blockchain confirmations
+
+### Lost access to authentication method
+
+If you lose access to your original authentication method:
+
+- Log in with an alternative method if you linked multiple
+- Contact Privy support for account recovery options
+- Your funds remain safe in your account address

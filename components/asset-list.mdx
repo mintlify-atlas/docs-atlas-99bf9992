@@ -1,0 +1,440 @@
+---
+title: AssetList
+description: A comprehensive component that displays user assets with expandable chain-by-chain breakdowns, fiat values, and portfolio distribution.
+---
+
+## Overview
+
+The `AssetList` component provides a detailed view of all user assets across multiple chains. It displays aggregated asset balances with the ability to expand each asset to see its distribution across different blockchain networks. The component handles loading states, empty states, and provides rich visual feedback with token icons and chain logos.
+
+## Import
+
+```tsx
+import { AssetList } from '@/components/wallet/AssetList';
+```
+
+## Props
+
+<ParamField path="balances" type="BalanceByAssetDto[]" default="undefined">
+  Array of balance information for each aggregated asset. Each item contains the total balance, fiat value, and breakdown by individual chains.
+</ParamField>
+
+<ParamField path="assets" type="Asset[]" required>
+  Array of asset metadata including symbols, names, decimals, and aggregated entities. Used to enrich balance data with proper formatting.
+</ParamField>
+
+<ParamField path="loading" type="boolean" required>
+  Indicates whether balance data is currently being fetched. Shows skeleton loaders when `true`.
+</ParamField>
+
+## Type Definitions
+
+```tsx
+interface AssetListProps {
+  balances?: BalanceByAssetDto[];
+  assets: Asset[];
+  loading: boolean;
+}
+
+// Balance data structure
+interface BalanceByAssetDto {
+  aggregatedAssetId: string; // e.g., "ob:usdc"
+  balance: string; // Total balance across all chains (BigInt as string)
+  fiatValue: number; // Total USD value
+  individualAssetBalances: IndividualAssetBalance[];
+}
+
+interface IndividualAssetBalance {
+  assetType: string; // CAIP-19 format: "eip155:1/erc20:0x..."
+  balance: string; // Balance on this specific chain
+  fiatValue: number; // USD value on this chain
+}
+
+// Asset metadata
+interface Asset {
+  aggregatedAssetId: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  aggregatedEntities: AggregatedAssetEntity[];
+}
+```
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { AssetList } from '@/components/wallet/AssetList';
+import { useBalances } from '@/lib/hooks/useBalances';
+import { useAssets } from '@/lib/hooks/useAssets';
+import { usePredictedAddress } from '@/lib/contexts/PredictedAddressContext';
+
+export default function WalletView() {
+  const { predictedAddress } = usePredictedAddress();
+  const { balances, loading } = useBalances(predictedAddress);
+  const { assets } = useAssets();
+
+  return (
+    <AssetList
+      balances={balances?.balanceByAggregatedAsset}
+      assets={assets}
+      loading={loading}
+    />
+  );
+}
+```
+
+### In Account Modal
+
+```tsx
+// From ConnectButton.tsx
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent>
+    <WalletHeader address={predictedAddress} />
+    <AccountAddress address={predictedAddress} />
+    <PortfolioSummary
+      totalValue={balances.totalBalance.fiatValue}
+      assetCount={balances.balanceByAggregatedAsset.length}
+      chainCount={uniqueChainCount}
+      onRefresh={fetchBalances}
+    />
+    <AssetList
+      balances={balances.balanceByAggregatedAsset}
+      assets={assets}
+      loading={balancesLoading}
+    />
+  </DialogContent>
+</Dialog>
+```
+
+## Features
+
+### Expandable Asset Details
+
+Each asset can be expanded to show its distribution across different chains:
+
+```tsx
+const [expandedAssets, setExpandedAssets] = useState<Set<string>>(new Set());
+
+const toggleAssetExpansion = (assetId: string) => {
+  setExpandedAssets(prev => {
+    const newSet = new Set(prev);
+    if (newSet.has(assetId)) {
+      newSet.delete(assetId);
+    } else {
+      newSet.add(assetId);
+    }
+    return newSet;
+  });
+};
+```
+
+### Asset Display Information
+
+For each asset, the component shows:
+
+- **Token Icon**: Either from metadata or a generated colored circle with the first letter
+- **Symbol**: Uppercase token symbol (e.g., USDC, ETH)
+- **Chain Count**: Number of chains where the asset exists
+- **Total Fiat Value**: USD value across all chains
+- **Total Balance**: Formatted token amount
+
+### Chain Distribution Details
+
+When expanded, each asset shows:
+
+- **Chain Logo**: Visual identifier for the blockchain
+- **Chain Name**: Human-readable chain name (e.g., "Ethereum", "Polygon")
+- **Balance on Chain**: Token amount on that specific chain
+- **Fiat Value**: USD value on that chain
+- **Percentage**: Proportion of total asset value on this chain
+
+## Component States
+
+<Tabs>
+  <Tab title="Loading">
+    Shows three skeleton placeholders while fetching data:
+    
+    ```tsx
+    <div className="space-y-3">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="w-16 h-4" />
+              <Skeleton className="w-12 h-3" />
+            </div>
+          </div>
+          <div className="space-y-1 text-right">
+            <Skeleton className="w-16 h-4" />
+            <Skeleton className="w-20 h-3" />
+          </div>
+        </div>
+      ))}
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Empty State">
+    Shows when user has no assets with positive value:
+    
+    ```tsx
+    <div className="text-center space-y-4">
+      <div className="w-12 h-12 rounded-full bg-muted/40">
+        <Wallet className="h-6 w-6" />
+      </div>
+      <div>
+        <h4>No assets yet</h4>
+        <p>Your token balances will appear here</p>
+      </div>
+      <div className="bg-muted/30 p-4">
+        <h5>Getting started:</h5>
+        <ol>
+          <li>Send assets to your Account Address</li>
+          <li>Balances sync across all chains</li>
+          <li>Expand each asset for details</li>
+        </ol>
+      </div>
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Asset List">
+    Displays assets sorted by fiat value (highest first):
+    
+    ```tsx
+    <div className="space-y-2 max-h-64 overflow-y-auto">
+      {assets
+        .sort((a, b) => (b.fiatValue || 0) - (a.fiatValue || 0))
+        .map(asset => (
+          <AssetCard key={asset.aggregatedAssetId} />
+        ))}
+    </div>
+    ```
+  </Tab>
+</Tabs>
+
+## Helper Functions
+
+### Asset Symbol Extraction
+
+```tsx
+const getAssetSymbol = (assetId: string) => {
+  return assetId.split(':')[1]?.toUpperCase() || assetId;
+};
+
+// Example: "ob:usdc" -> "USDC"
+```
+
+### Token Icon Retrieval
+
+```tsx
+const getTokenIcon = (assetId: string) => {
+  const token = findTokenByAggregatedAssetId(assetId);
+  return token?.icon;
+};
+```
+
+### Decimal Precision
+
+```tsx
+const getAssetDecimals = (aggregatedAssetId: string) => {
+  const asset = assets.find(a => a.aggregatedAssetId === aggregatedAssetId);
+  return asset?.decimals || 18;
+};
+```
+
+### Chain Information
+
+```tsx
+const getChainInfo = (assetType: string) => {
+  const chainId = extractChainIdFromAssetType(assetType);
+  return {
+    name: getChainName(chainId),
+    logoUrl: getChainLogoUrl(chainId),
+    chainId,
+  };
+};
+
+// Example: "eip155:1/erc20:0x..." -> { name: "Ethereum", logoUrl: "...", chainId: "1" }
+```
+
+### Icon Color Generation
+
+Generates consistent colors for token icons based on the symbol:
+
+```tsx
+const getTokenIconColor = (symbol: string) => {
+  const colors = [
+    'bg-blue-500',
+    'bg-emerald-500',
+    'bg-purple-500',
+    'bg-orange-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-teal-500',
+    'bg-red-500',
+  ];
+  const index = symbol.charCodeAt(0) % colors.length;
+  return colors[index];
+};
+```
+
+## Formatting
+
+### Fiat Values
+
+All USD values are formatted with 2 decimal places and thousands separators:
+
+```tsx
+${asset.fiatValue?.toLocaleString(undefined, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})}
+```
+
+### Token Amounts
+
+Token balances use the `formatTokenAmount` utility:
+
+```tsx
+formatTokenAmount(
+  asset.balance,
+  getAssetDecimals(asset.aggregatedAssetId)
+)
+```
+
+### Percentage Distribution
+
+Shows what percentage of the asset's value is on each chain:
+
+```tsx
+{((individualAsset.fiatValue / asset.fiatValue) * 100).toFixed(1)}%
+```
+
+## Styling
+
+### Asset Card
+
+- Hover effects: `hover:border-muted-foreground/20`
+- Smooth transitions: `transition-all duration-200`
+- Responsive padding: `px-4 py-1`
+
+### Expanded Section
+
+- Background: `bg-muted/30`
+- Border top: `border-t border-border`
+- Nested cards: `bg-background rounded-lg`
+
+### Scrollable Container
+
+```tsx
+<div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+  {/* Assets */}
+</div>
+```
+
+Limits height to 256px (64 * 4) with vertical scroll for many assets.
+
+## Loading Indicator
+
+When loading, shows a small indicator in the header:
+
+```tsx
+{loading && (
+  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+    <RefreshCw className="h-3 w-3 animate-spin" />
+    Loading...
+  </div>
+)}
+```
+
+## Asset Filtering
+
+Only displays assets with positive fiat value:
+
+```tsx
+const getAssetsWithPositiveValue = () => {
+  if (!balances) return [];
+  return balances.filter(asset => asset.fiatValue && asset.fiatValue > 0);
+};
+```
+
+## Empty State Guidance
+
+Provides helpful onboarding information:
+
+<Steps>
+  <Step title="Send assets">
+    Direct users to send assets to their Account Address
+  </Step>
+  <Step title="Automatic sync">
+    Explain that balances sync across all supported chains
+  </Step>
+  <Step title="Detailed views">
+    Mention the expandable chain breakdowns
+  </Step>
+</Steps>
+
+## Accessibility
+
+- Proper heading hierarchy (`h3`, `h4`, `h5`)
+- Semantic HTML with `button` elements for interactions
+- Clear visual indicators for expandable content (chevron icons)
+- Keyboard navigation support for expansion toggles
+- Image fallbacks with text alternatives
+
+## Error Handling
+
+### Image Loading Failures
+
+Both token icons and chain logos have fallback displays:
+
+```tsx
+<img
+  src={iconUrl}
+  alt={symbol}
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.style.display = 'none';
+    target.nextElementSibling?.classList.remove('hidden');
+  }}
+/>
+<div className="hidden">
+  {/* Fallback content */}
+</div>
+```
+
+## Performance Considerations
+
+- Sorted assets are memoized through the render cycle
+- Expansion state uses `Set` for O(1) lookups
+- Virtual scrolling could be added for wallets with 100+ assets
+- Image loading is lazy and has fallbacks
+
+## Related Components
+
+- [BalanceDisplay](/components/balance-display) - Simpler balance view
+- [ConnectButton](/components/connect-button) - Parent component with modal
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always provide asset metadata">
+    The `assets` prop is required for proper decimal formatting and display. Fetch this data using `useAssets()` hook.
+  </Accordion>
+  
+  <Accordion title="Handle undefined balances">
+    The `balances` prop is optional to support loading states. Always check for existence before rendering.
+  </Accordion>
+  
+  <Accordion title="Consider scroll containers">
+    The component has a max height of 256px. Ensure parent containers accommodate this or adjust the `max-h-64` class.
+  </Accordion>
+  
+  <Accordion title="Optimize for many assets">
+    For wallets with 50+ different tokens, consider implementing pagination or virtual scrolling.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,299 @@
+---
+title: Portfolio tracking
+description: View your aggregated token balances across all supported blockchains in one place
+---
+
+Portfolio tracking provides a unified view of your token holdings across multiple blockchains. Instead of checking each network separately, you see all your balances aggregated in a single interface.
+
+## How it works
+
+OneBalance aggregates your balances by:
+
+1. Querying your account address across all supported chains
+2. Identifying tokens you hold on each chain
+3. Combining balances for the same token across different chains
+4. Converting values to USD for easy comparison
+5. Calculating your total portfolio value
+
+This gives you a complete picture of your holdings without switching networks or checking multiple wallets.
+
+## Implementation
+
+### Fetching balances
+
+Balances are fetched using the `useBalances` hook:
+
+```typescript lib/hooks/useBalances.ts
+import { useBalances } from '@/lib/hooks';
+
+const { balances, loading, error, fetchBalances } = useBalances(predictedAddress);
+
+// Balances structure:
+// {
+//   totalBalance: { fiatValue: number },
+//   balanceByAggregatedAsset: [
+//     {
+//       aggregatedAssetId: 'ob:usdc',
+//       balance: '1000000',
+//       fiatValue: 1.00
+//     }
+//   ]
+// }
+```
+
+### API integration
+
+The balances API endpoint returns aggregated data:
+
+```typescript lib/api/balances.ts
+export const balancesApi = {
+  getAggregatedBalance: async (address: string): Promise<BalancesResponse> => {
+    const response = await apiClient.get(
+      `/v2/balances/aggregated-balance?address=${address}`
+    );
+    return response.data;
+  },
+};
+```
+
+### Balance types
+
+The balance response includes detailed type information:
+
+```typescript lib/types/balances.ts
+interface BalancesResponse {
+  totalBalance: {
+    fiatValue: number;
+  };
+  balanceByAggregatedAsset: {
+    aggregatedAssetId: string;
+    balance: string;
+    fiatValue: number;
+    decimals: number;
+  }[];
+}
+```
+
+## Displaying balances
+
+### Total portfolio value
+
+Show the total value of all holdings:
+
+```tsx components/BalanceDisplay.tsx
+<div className="flex justify-between items-center">
+  <h3 className="text-sm font-medium">Total Balance</h3>
+  <span className="font-medium">
+    ${balances.totalBalance?.fiatValue.toFixed(2)}
+  </span>
+</div>
+```
+
+### Per-asset balances
+
+Display individual token balances with proper decimal formatting:
+
+```typescript
+const formatTokenAmount = (amount: string, decimals: number): string => {
+  const value = BigInt(amount);
+  const divisor = BigInt(10 ** decimals);
+  const integerPart = value / divisor;
+  const remainder = value % divisor;
+  
+  return `${integerPart}.${remainder.toString().padStart(decimals, '0')}`;
+};
+```
+
+### Balance updates
+
+Balances automatically refresh after transactions:
+
+```typescript components/SwapForm.tsx
+const handleTransactionComplete = useCallback(() => {
+  // Clear the form
+  setFromAmount('');
+  setToAmount('');
+  resetQuote();
+  
+  // Refresh balances after transaction completion
+  if (predictedAddress) {
+    fetchBalances();
+  }
+}, [predictedAddress, fetchBalances, resetQuote]);
+```
+
+## Token input integration
+
+The swap and transfer forms integrate balance display:
+
+```tsx components/TokenInput.tsx
+<TokenInput
+  label="Sell"
+  assets={assets}
+  selectedAsset={sourceAsset}
+  onAssetChange={setSourceAsset}
+  amount={fromAmount}
+  onAmountChange={handleFromAmountChange}
+  balance={sourceBalance}
+  showPercentageButtons={true}
+  balances={balances?.balanceByAggregatedAsset}
+/>
+```
+
+### Balance-based validation
+
+The application validates amounts against available balances:
+
+```typescript components/SwapForm.tsx
+const hasSufficientBalance = (amount: string) => {
+  if (!sourceBalance || !selectedSourceAsset || !amount) return false;
+  
+  try {
+    const parsedAmount = parseTokenAmount(amount, selectedSourceAsset.decimals || 18);
+    return BigInt(sourceBalance.balance) >= BigInt(parsedAmount);
+  } catch {
+    return false;
+  }
+};
+```
+
+## Real-time balance tracking
+
+Balances are tracked dynamically as the user interacts with the application:
+
+```typescript components/SwapForm.tsx
+const [sourceBalance, setSourceBalance] = useState(null);
+const [targetBalance, setTargetBalance] = useState(null);
+
+// Update balance state when balances or selected assets change
+useEffect(() => {
+  if (balances?.balanceByAggregatedAsset) {
+    const newSourceBalance = balances.balanceByAggregatedAsset.find(
+      b => b.aggregatedAssetId === sourceAsset
+    ) || null;
+    
+    const newTargetBalance = balances.balanceByAggregatedAsset.find(
+      b => b.aggregatedAssetId === targetAsset
+    ) || null;
+    
+    setSourceBalance(newSourceBalance);
+    setTargetBalance(newTargetBalance);
+  }
+}, [balances, sourceAsset, targetAsset]);
+```
+
+## Aggregated asset IDs
+
+Assets are identified using aggregated IDs that represent the token across all chains:
+
+```typescript
+// Example aggregated asset IDs:
+'ob:usdc'  // USDC across all chains
+'ob:eth'   // ETH across all chains
+'ob:wbtc'  // Wrapped BTC across all chains
+
+// Extract token symbol:
+const getAssetSymbol = (aggregatedAssetId: string) => {
+  return aggregatedAssetId.split(':')[1]?.toUpperCase() || aggregatedAssetId;
+};
+```
+
+## Loading states
+
+Handle loading states gracefully:
+
+```tsx
+{loading ? (
+  <div className="text-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+    <p>Loading balances...</p>
+  </div>
+) : (
+  <BalanceDisplay balances={balances} />
+)}
+```
+
+## Error handling
+
+Display clear error messages when balance fetching fails:
+
+```tsx
+{error && (
+  <Alert variant="destructive">
+    <AlertDescription>Error loading balances: {error}</AlertDescription>
+  </Alert>
+)}
+```
+
+## USD value conversion
+
+Balances include USD values for easy portfolio tracking:
+
+```typescript
+const getDestinationUSDValue = () => {
+  if (quote && quote.destinationToken && toAmount) {
+    const fiatValue = quote.destinationToken.fiatValue;
+    if (fiatValue) {
+      const numericValue = typeof fiatValue === 'number' 
+        ? fiatValue 
+        : parseFloat(fiatValue);
+      return !isNaN(numericValue) ? numericValue.toFixed(2) : null;
+    }
+  }
+  return null;
+};
+```
+
+## Percentage-based operations
+
+Users can quickly select a percentage of their balance:
+
+```typescript components/SwapForm.tsx
+onPercentageClick={percentage => {
+  if (sourceBalance && selectedSourceAsset) {
+    const balance = sourceBalance.balance;
+    const decimals = selectedSourceAsset.decimals || 18;
+    const maxAmount = formatTokenAmount(balance, decimals);
+    const targetAmount = ((parseFloat(maxAmount) * percentage) / 100).toString();
+    
+    setFromAmount(targetAmount);
+  }
+}}
+```
+
+Common percentages: 25%, 50%, 75%, 100%
+
+## Best practices
+
+<Steps>
+  <Step title="Fetch on wallet connection">
+    Load balances immediately when the user connects their wallet to provide instant feedback.
+  </Step>
+  
+  <Step title="Refresh after transactions">
+    Always refresh balances after successful swaps or transfers to show updated values.
+  </Step>
+  
+  <Step title="Handle loading states">
+    Show skeleton loaders while balances are being fetched to improve perceived performance.
+  </Step>
+  
+  <Step title="Cache balance data">
+    Store balance data in state to avoid unnecessary API calls when switching between views.
+  </Step>
+  
+  <Step title="Format amounts properly">
+    Always account for token decimals when displaying or parsing amounts.
+  </Step>
+</Steps>
+
+<Note>
+Balances are aggregated across all chains, but individual chain balances can be queried separately if needed for advanced use cases.
+</Note>
+
+## API reference
+
+For more details on balance-related endpoints:
+
+- [Get Aggregated Balance](/api/balances#getaggregatedbalance)
+- [Get Assets](/api/assets#getassets)

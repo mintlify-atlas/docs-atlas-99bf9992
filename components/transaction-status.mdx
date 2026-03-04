@@ -1,0 +1,176 @@
+---
+title: 'TransactionStatus'
+description: 'Display real-time transaction status with chain operation details and explorer links'
+---
+
+## Overview
+
+The `TransactionStatus` component provides a persistent, user-friendly display of transaction progress and completion status. It shows real-time updates for swaps and transfers, including transaction hashes and blockchain explorer links for both origin and destination chains.
+
+## Import
+
+```tsx
+import { TransactionStatus } from '@/components/TransactionStatus';
+```
+
+## Props
+
+<ParamField path="status" type="QuoteStatus | null" required>
+  The current status of the transaction. Set to `null` to hide the component.
+  
+  ```typescript
+  interface QuoteStatus {
+    quoteId: string;
+    status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS' | 'REFUNDED';
+    user: string;
+    recipientAccountId: string;
+    originChainOperations: {
+      hash: string;
+      chainId: number;
+      explorerUrl: string;
+    }[];
+    destinationChainOperations: {
+      hash: string;
+      chainId: number;
+      explorerUrl: string;
+    }[];
+  }
+  ```
+</ParamField>
+
+<ParamField path="isPolling" type="boolean" required>
+  Indicates whether the transaction status is currently being polled. Used for displaying loading states.
+</ParamField>
+
+<ParamField path="onComplete" type="() => void">
+  Optional callback function that is triggered once when the transaction reaches a terminal state (`COMPLETED` or `FAILED`).
+</ParamField>
+
+## Features
+
+### Status Persistence
+
+The component internally persists the status even when the `status` prop becomes `null`. This ensures users can still view completed transaction details after polling stops.
+
+### Visual Status Indicators
+
+- **COMPLETED**: Green checkmark icon with success message
+- **FAILED**: Red X icon with error message
+- **REFUNDED**: Orange warning icon
+- **PENDING/IN_PROGRESS**: Yellow clock icon
+
+### Chain Operations
+
+Displays transaction hashes and explorer links for:
+- **Origin Chain**: Where the transaction was initiated
+- **Destination Chain**: Where the tokens were received (for cross-chain operations)
+
+## Usage Example
+
+<CodeGroup>
+```tsx Basic Usage
+import { TransactionStatus } from '@/components/TransactionStatus';
+import { useQuoteStatus } from '@/lib/hooks/useQuoteStatus';
+
+function SwapPage() {
+  const { status, isPolling } = useQuoteStatus(quoteId);
+  
+  return (
+    <TransactionStatus 
+      status={status}
+      isPolling={isPolling}
+      onComplete={() => {
+        console.log('Transaction completed!');
+        // Refresh balances or redirect user
+      }}
+    />
+  );
+}
+```
+
+```tsx With State Management
+import { useState } from 'react';
+import { TransactionStatus } from '@/components/TransactionStatus';
+
+function TransferFlow() {
+  const [quoteStatus, setQuoteStatus] = useState(null);
+  const [polling, setPolling] = useState(false);
+  
+  const handleTransferComplete = () => {
+    // Refresh user balances
+    refetchBalances();
+    // Show success notification
+    showNotification('Transfer completed!');
+  };
+  
+  return (
+    <div>
+      {/* Transfer form */}
+      
+      <TransactionStatus 
+        status={quoteStatus}
+        isPolling={polling}
+        onComplete={handleTransferComplete}
+      />
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Behavior
+
+### Automatic Dismissal Prevention
+
+The component uses an internal ref to prevent the `onComplete` callback from being called multiple times, even if the component re-renders.
+
+### User Dismissal
+
+Users can manually dismiss the status card by clicking the X button in the top-right corner. This resets the internal state and hides the component.
+
+### Status Messages
+
+<Tabs>
+  <Tab title="Success">
+    ```
+    ✅ Transaction completed successfully!
+    Your balances have been updated.
+    ```
+  </Tab>
+  <Tab title="Failed">
+    ```
+    ❌ Transaction failed
+    Please check the transaction details and try again.
+    ```
+  </Tab>
+</Tabs>
+
+## Styling
+
+The component uses:
+- `Card` component for the container
+- Color-coded status indicators with dark mode support
+- Responsive text sizing
+- External link icons for blockchain explorers
+
+## Integration Points
+
+Typically used with:
+- `useQuoteStatus` hook for polling transaction status
+- `SwapForm` or `TransferForm` components
+- Quote execution flows
+
+## Related Components
+
+- [TransactionHistory](/components/transaction-history) - View historical transactions
+- [QuoteDetails](/components/quote-details) - Display quote information before execution
+
+## Notes
+
+<Note>
+  The component automatically handles the transition from polling to completed states. You don't need to manually manage the visibility logic.
+</Note>
+
+<Warning>
+  The `onComplete` callback will only fire once per transaction, even if the component re-renders. To handle a new transaction, ensure you provide a new `status` object.
+</Warning>

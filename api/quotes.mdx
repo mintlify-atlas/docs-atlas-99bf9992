@@ -1,0 +1,425 @@
+---
+title: 'Quotes API'
+description: 'Request, execute, and monitor swap quotes across chains'
+---
+
+## Overview
+
+The Quotes API enables you to request price quotes for chain-abstracted swaps, execute those quotes, and monitor their execution status. This is the core API for performing token swaps in the OneBalance system.
+
+## API Methods
+
+### getQuote
+
+Request a quote for swapping tokens across chains.
+
+```typescript
+quotesApi.getQuote(request: QuoteRequest): Promise<Quote>
+```
+
+#### Parameters
+
+<ParamField path="request" type="QuoteRequest" required>
+  The quote request object containing source and destination details
+  
+  <Expandable title="QuoteRequest Structure">
+    <ParamField path="from" type="object" required>
+      Source account and asset information
+      
+      <Expandable title="from properties">
+        <ParamField path="account" type="object" required>
+          <ParamField path="sessionAddress" type="string" required>
+            Session wallet address (typically embedded wallet)
+          </ParamField>
+          <ParamField path="adminAddress" type="string" required>
+            Admin wallet address (typically same as session address)
+          </ParamField>
+          <ParamField path="accountAddress" type="string" required>
+            Smart contract account address (predicted address)
+          </ParamField>
+        </ParamField>
+        
+        <ParamField path="asset" type="object" required>
+          <ParamField path="assetId" type="string" required>
+            Aggregated asset ID (e.g., "ob:usdc", "ob:eth")
+          </ParamField>
+        </ParamField>
+        
+        <ParamField path="amount" type="string" required>
+          Amount to swap in smallest unit (wei for ETH, base units for tokens)
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField path="to" type="object" required>
+      Destination asset information
+      
+      <Expandable title="to properties">
+        <ParamField path="asset" type="object" required>
+          <ParamField path="assetId" type="string" required>
+            Aggregated asset ID for destination token
+          </ParamField>
+        </ParamField>
+        
+        <ParamField path="account" type="string">
+          Optional recipient address in CAIP format (e.g., "eip155:1:0x...") for transfers to other accounts
+        </ParamField>
+        
+        <ParamField path="amount" type="string">
+          Optional exact output amount for reverse quotes
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+#### Returns
+
+<ResponseField name="Quote" type="object">
+  A quote object containing all information needed to execute the swap
+  
+  <Expandable title="Quote Structure">
+    <ResponseField name="id" type="string">
+      Unique identifier for this quote
+    </ResponseField>
+    
+    <ResponseField name="account" type="object">
+      Account information used for this quote
+    </ResponseField>
+    
+    <ResponseField name="originToken" type="TokenInfo">
+      Information about the source token and amount
+      
+      <Expandable title="TokenInfo properties">
+        <ResponseField name="aggregatedAssetId" type="string">
+          The aggregated asset identifier
+        </ResponseField>
+        <ResponseField name="amount" type="string">
+          Token amount in base units
+        </ResponseField>
+        <ResponseField name="assetType" type="string | string[]">
+          Individual asset type(s) in CAIP-19 format
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="destinationToken" type="TokenInfo">
+      Information about the destination token and expected amount
+    </ResponseField>
+    
+    <ResponseField name="expirationTimestamp" type="string">
+      Unix timestamp when this quote expires (in seconds)
+    </ResponseField>
+    
+    <ResponseField name="tamperProofSignature" type="string">
+      Server signature ensuring quote integrity
+    </ResponseField>
+    
+    <ResponseField name="originChainsOperations" type="ChainOperation[]">
+      Array of operations to execute on source chain(s)
+    </ResponseField>
+    
+    <ResponseField name="destinationChainOperation" type="ChainOperation">
+      Optional operation for destination chain
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Example Request
+import { quotesApi } from '@/lib/api/quotes';
+import type { QuoteRequest } from '@/lib/types/quote';
+
+const quoteRequest: QuoteRequest = {
+  from: {
+    account: {
+      sessionAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      adminAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      accountAddress: '0x1234567890abcdef1234567890abcdef12345678'
+    },
+    asset: {
+      assetId: 'ob:usdc'
+    },
+    amount: '1000000' // 1 USDC (6 decimals)
+  },
+  to: {
+    asset: {
+      assetId: 'ob:eth'
+    }
+  }
+};
+
+const quote = await quotesApi.getQuote(quoteRequest);
+console.log('Quote ID:', quote.id);
+console.log('Expected output:', quote.destinationToken.amount);
+```
+
+```typescript Real Usage (from useQuotes.ts:98)
+const quote = await quotesApi.getQuote(quoteRequest);
+```
+</CodeGroup>
+
+---
+
+### executeQuote
+
+Execute a signed quote to perform the swap.
+
+```typescript
+quotesApi.executeQuote(quote: Quote): Promise<any>
+```
+
+<Note>
+Before calling this function, you must sign the quote's chain operations using the user's wallet. The `quote` parameter should include signed `userOp` signatures.
+</Note>
+
+#### Parameters
+
+<ParamField path="quote" type="Quote" required>
+  The quote object with signed user operations. This should be the same quote returned from `getQuote()`, but with signatures added to each chain operation.
+</ParamField>
+
+#### Returns
+
+<ResponseField name="response" type="any">
+  Execution confirmation response from the server
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Example Execution
+import { quotesApi } from '@/lib/api/quotes';
+import { signQuote } from '@/lib/utils/privySigningUtils';
+
+// First, get a quote
+const quote = await quotesApi.getQuote(quoteRequest);
+
+// Check if quote is still valid
+const expirationTime = parseInt(quote.expirationTimestamp) * 1000;
+if (Date.now() > expirationTime) {
+  throw new Error('Quote has expired');
+}
+
+// Sign the quote with user's wallet
+const signedQuote = await signQuote(quote, embeddedWallet);
+
+// Execute the signed quote
+await quotesApi.executeQuote(signedQuote);
+
+console.log('Quote executed successfully!');
+```
+
+```typescript Real Usage (from useQuotes.ts:139-142)
+// Sign the quote with Privy
+const signedQuote = await signQuote(state.quote, embeddedWallet);
+
+// Execute the signed quote
+await quotesApi.executeQuote(signedQuote);
+```
+</CodeGroup>
+
+---
+
+### getQuoteStatus
+
+Check the execution status of a quote.
+
+```typescript
+quotesApi.getQuoteStatus(quoteId: string): Promise<QuoteStatus>
+```
+
+<Info>
+This endpoint should be polled periodically after executing a quote to monitor transaction progress across chains.
+</Info>
+
+#### Parameters
+
+<ParamField path="quoteId" type="string" required>
+  The unique identifier of the quote to check (from `quote.id`)
+</ParamField>
+
+#### Returns
+
+<ResponseField name="QuoteStatus" type="object">
+  Current status and transaction details
+  
+  <Expandable title="QuoteStatus Structure">
+    <ResponseField name="quoteId" type="string">
+      The quote identifier
+    </ResponseField>
+    
+    <ResponseField name="status" type="'PENDING' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS' | 'REFUNDED'">
+      Current execution status
+      
+      - `PENDING`: Quote executed, waiting for blockchain confirmation
+      - `IN_PROGRESS`: Transactions being processed
+      - `COMPLETED`: All transactions confirmed successfully
+      - `FAILED`: One or more transactions failed
+      - `REFUNDED`: Failed transaction with funds refunded
+    </ResponseField>
+    
+    <ResponseField name="user" type="string">
+      User account address
+    </ResponseField>
+    
+    <ResponseField name="recipientAccountId" type="string">
+      Recipient account identifier
+    </ResponseField>
+    
+    <ResponseField name="originChainOperations" type="array">
+      Transaction details from source chain(s)
+      
+      <Expandable title="Operation properties">
+        <ResponseField name="hash" type="string">
+          Transaction hash
+        </ResponseField>
+        <ResponseField name="chainId" type="number">
+          Chain ID where transaction occurred
+        </ResponseField>
+        <ResponseField name="explorerUrl" type="string">
+          Block explorer URL for the transaction
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="destinationChainOperations" type="array">
+      Transaction details from destination chain
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example
+
+<CodeGroup>
+```typescript Polling Example
+import { quotesApi } from '@/lib/api/quotes';
+
+// Start polling after executing a quote
+const pollStatus = async (quoteId: string) => {
+  const interval = setInterval(async () => {
+    try {
+      const status = await quotesApi.getQuoteStatus(quoteId);
+      
+      console.log('Status:', status.status);
+      console.log('Origin txs:', status.originChainOperations);
+      
+      if (status.status === 'COMPLETED') {
+        clearInterval(interval);
+        console.log('Swap completed!');
+        console.log('Explorer:', status.destinationChainOperations[0]?.explorerUrl);
+      } else if (status.status === 'FAILED') {
+        clearInterval(interval);
+        console.error('Swap failed');
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+      clearInterval(interval);
+    }
+  }, 1000); // Poll every 1 second
+};
+
+pollStatus(quote.id);
+```
+
+```typescript Real Usage (from useQuotes.ts:154)
+const statusResponse = await quotesApi.getQuoteStatus(state.quote!.id);
+```
+</CodeGroup>
+
+## Complete Workflow Example
+
+Here's a complete example showing how to request, execute, and monitor a swap:
+
+<CodeGroup>
+```typescript Complete Swap Flow
+import { quotesApi } from '@/lib/api/quotes';
+import { signQuote } from '@/lib/utils/privySigningUtils';
+import type { QuoteRequest } from '@/lib/types/quote';
+
+// Step 1: Create a quote request
+const quoteRequest: QuoteRequest = {
+  from: {
+    account: {
+      sessionAddress: walletAddress,
+      adminAddress: walletAddress,
+      accountAddress: smartAccountAddress
+    },
+    asset: { assetId: 'ob:usdc' },
+    amount: '100000000' // 100 USDC
+  },
+  to: {
+    asset: { assetId: 'ob:eth' }
+  }
+};
+
+// Step 2: Get the quote
+const quote = await quotesApi.getQuote(quoteRequest);
+console.log('Quote received:', quote.id);
+console.log('Will receive:', quote.destinationToken.amount, 'ETH');
+
+// Step 3: Sign and execute
+const signedQuote = await signQuote(quote, wallet);
+await quotesApi.executeQuote(signedQuote);
+console.log('Quote executed, monitoring status...');
+
+// Step 4: Poll for status
+const checkStatus = setInterval(async () => {
+  const status = await quotesApi.getQuoteStatus(quote.id);
+  
+  if (status.status === 'COMPLETED' || status.status === 'FAILED') {
+    clearInterval(checkStatus);
+    console.log('Final status:', status.status);
+  }
+}, 2000);
+```
+</CodeGroup>
+
+## Related Types
+
+- [QuoteRequest](/api/types/quote#quoterequest) - Structure for requesting quotes
+- [Quote](/api/types/quote#quote) - Quote response structure
+- [QuoteStatus](/api/types/quote#quotestatus) - Status response structure
+- [ChainOperation](/api/types/quote#chainoperation) - Chain operation details
+
+## Error Handling
+
+<CodeGroup>
+```typescript Error Handling Example
+try {
+  const quote = await quotesApi.getQuote(request);
+} catch (error) {
+  if (error instanceof Error) {
+    console.error('Failed to get quote:', error.message);
+    // Handle specific error cases
+    if (error.message.includes('insufficient balance')) {
+      // Show balance error to user
+    } else if (error.message.includes('unsupported asset')) {
+      // Show asset error to user
+    }
+  }
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Expiration" icon="clock">
+    Always validate that `expirationTimestamp` hasn't passed before executing a quote
+  </Card>
+  
+  <Card title="Poll Efficiently" icon="rotate">
+    Poll status every 1-2 seconds after execution, and stop when status is terminal (COMPLETED/FAILED)
+  </Card>
+  
+  <Card title="Handle Errors" icon="triangle-exclamation">
+    Implement proper error handling for network failures and transaction rejections
+  </Card>
+  
+  <Card title="Show Progress" icon="spinner">
+    Display transaction hashes and explorer links to users for transparency
+  </Card>
+</CardGroup>

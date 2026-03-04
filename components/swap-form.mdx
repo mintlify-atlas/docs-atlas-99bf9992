@@ -1,0 +1,297 @@
+---
+title: SwapForm
+description: Complete token swap interface with real-time quotes and transaction execution
+---
+
+The `SwapForm` component provides a full-featured swap interface for exchanging tokens across chains. It handles quote fetching, balance checking, and swap execution with real-time price updates.
+
+## Import
+
+```typescript
+import { SwapForm } from '@/components/SwapForm';
+```
+
+## Overview
+
+The SwapForm is a complex, self-contained component that orchestrates the entire swap workflow:
+
+- **Asset Selection**: Choose source and target tokens from available assets
+- **Amount Input**: Enter swap amounts with balance validation
+- **Quote Fetching**: Automatically fetches and displays real-time quotes
+- **Balance Management**: Shows balances and provides percentage shortcuts (25%, 50%, 75%, MAX)
+- **Transaction Execution**: Handles the complete swap flow with status tracking
+- **Error Handling**: Displays meaningful errors and validation messages
+
+## Component Structure
+
+This component does not accept props - it's a standalone form that manages its own state.
+
+```typescript
+export const SwapForm: React.FC = () => {
+  // Component implementation
+}
+```
+
+## Key Features
+
+### Asset Management
+
+The component maintains state for source and destination assets:
+
+```typescript
+const [sourceAsset, setSourceAsset] = useState<string>('ob:usdc');
+const [targetAsset, setTargetAsset] = useState<string>('ob:eth');
+```
+
+### Balance Validation
+
+Built-in balance checking prevents insufficient balance errors:
+
+```typescript
+const hasSufficientBalance = (amount: string) => {
+  if (!sourceBalance || !selectedSourceAsset || !amount) return false;
+  
+  const parsedAmount = parseTokenAmount(amount, selectedSourceAsset.decimals || 18);
+  return BigInt(sourceBalance.balance) >= BigInt(parsedAmount);
+};
+```
+
+### Debounced Quote Fetching
+
+Quotes are fetched with a 1-second debounce to reduce API calls:
+
+```typescript
+const debouncedGetQuote = useCallback(
+  debounce(async request => {
+    await getQuote(request);
+  }, 1000),
+  [getQuote]
+);
+```
+
+## Usage Example
+
+```tsx
+import { SwapForm } from '@/components/SwapForm';
+
+function SwapPage() {
+  return (
+    <div className="container mx-auto py-8">
+      <SwapForm />
+    </div>
+  );
+}
+```
+
+## State Management
+
+The component uses several hooks for state management:
+
+<ParamField path="useAssets" type="hook">
+  Fetches available assets from the API
+</ParamField>
+
+<ParamField path="useChains" type="hook">
+  Loads supported blockchain networks
+</ParamField>
+
+<ParamField path="useQuotes" type="hook">
+  Manages quote fetching and execution
+</ParamField>
+
+<ParamField path="useBalances" type="hook">
+  Retrieves user balances for the predicted address
+</ParamField>
+
+<ParamField path="useEmbeddedWallet" type="hook">
+  Provides access to the embedded wallet instance
+</ParamField>
+
+## User Interactions
+
+### Percentage Buttons
+
+The source token input includes quick-select buttons for common percentages:
+
+- **25%**: Swap 25% of available balance
+- **50%**: Swap 50% of available balance
+- **75%**: Swap 75% of available balance
+- **MAX**: Swap entire balance
+
+### Swap Direction Toggle
+
+Users can reverse the swap direction by clicking the swap icon button between inputs:
+
+```typescript
+const handleSwapDirection = () => {
+  setSourceAsset(targetAsset);
+  setTargetAsset(sourceAsset);
+  // Reset amounts and quote
+  setFromAmount('');
+  setToAmount('');
+  setParsedFromAmount('');
+  resetQuote();
+};
+```
+
+## Quote Lifecycle
+
+### 1. Quote Request
+
+Triggered when amount, source asset, or target asset changes:
+
+```typescript
+if (authenticated && embeddedWallet && hasSufficientBalance(value)) {
+  debouncedGetQuote({
+    fromTokenAmount: parsed,
+    fromAggregatedAssetId: sourceAsset,
+    toAggregatedAssetId: targetAsset,
+  });
+}
+```
+
+### 2. Quote Display
+
+Shows quote details including:
+- Exchange rate
+- Token prices
+- Quote expiration countdown
+- Destination amount
+
+### 3. Quote Execution
+
+Executes the swap when the user clicks the swap button:
+
+```typescript
+<Button
+  className="w-full"
+  onClick={executeQuote}
+  disabled={getSwapButtonState().disabled}
+>
+  {getSwapButtonState().text}
+</Button>
+```
+
+## Button States
+
+The swap button dynamically updates based on the application state:
+
+| State | Button Text | Disabled |
+|-------|-------------|----------|
+| Not authenticated | "Login to Swap" | Yes |
+| Loading quote | "Getting Quote..." | Yes |
+| Executing | "Executing Swap..." | Yes |
+| Insufficient balance | "Insufficient Balance" | Yes |
+| Ready | "Swap" | No |
+
+## Error Handling
+
+### API Errors
+
+Displays API errors in an alert component:
+
+```tsx
+{error && (
+  <Alert variant="destructive">
+    <TriangleAlert className="h-4 w-4" />
+    <AlertTitle>An error occurred</AlertTitle>
+    <AlertDescription>{error}</AlertDescription>
+  </Alert>
+)}
+```
+
+### Quote Errors
+
+Shows specific quote-related errors:
+
+```tsx
+{quote?.error && (
+  <Alert variant="destructive">
+    <TriangleAlert className="h-4 w-4" />
+    <AlertTitle>Quote Error</AlertTitle>
+    <AlertDescription>{quote?.message}</AlertDescription>
+  </Alert>
+)}
+```
+
+## Loading States
+
+The component shows appropriate loading indicators:
+
+```tsx
+if (assetsLoading || chainsLoading) {
+  return (
+    <Card className="w-full max-w-lg mx-auto p-6">
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p>Loading assets...</p>
+      </div>
+    </Card>
+  );
+}
+```
+
+## Transaction Completion
+
+After a successful swap, the component:
+
+1. Clears the form inputs
+2. Resets the quote state
+3. Refreshes user balances
+
+```typescript
+const handleTransactionComplete = useCallback(() => {
+  setFromAmount('');
+  setToAmount('');
+  setParsedFromAmount('');
+  resetQuote();
+  
+  if (predictedAddress) {
+    fetchBalances();
+  }
+}, [predictedAddress, fetchBalances, resetQuote]);
+```
+
+## Onboarding Support
+
+The component includes data attributes for onboarding tooltips:
+
+- `data-onboarding="main-card"`: Main card container
+- `data-onboarding="from-token"`: Source token input
+- `data-onboarding="to-token"`: Destination token input
+- `data-onboarding="swap-button"`: Execute swap button
+- `data-onboarding="quote-details"`: Quote information display
+
+## Dependencies
+
+<CodeGroup>
+
+```typescript Components
+import { TokenInput } from '@/components/TokenInput';
+import { QuoteDetails } from '@/components/QuoteDetails';
+import { QuoteCountdown } from '@/components/QuoteCountdown';
+import { TransactionStatus } from '@/components/TransactionStatus';
+```
+
+```typescript UI Components
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+```
+
+```typescript Hooks
+import { useAssets, useChains, useQuotes, useBalances, useEmbeddedWallet } from '@/lib/hooks';
+```
+
+```typescript Utilities
+import { formatTokenAmount, parseTokenAmount } from '@/lib/utils/token';
+import debounce from 'lodash.debounce';
+```
+
+</CodeGroup>
+
+## Related Components
+
+- [TokenInput](/components/token-input) - Asset selection and amount input
+- [QuoteDetails](/components/quote-details) - Quote information display
+- [TransferForm](/components/transfer-form) - Cross-chain token transfers

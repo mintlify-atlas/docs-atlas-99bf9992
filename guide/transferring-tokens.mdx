@@ -1,0 +1,316 @@
+---
+title: Transferring tokens
+description: Send tokens to any address on any supported blockchain with OneBalance's cross-chain transfer feature
+---
+
+OneBalance's transfer feature lets you send tokens to any address on any supported blockchain. Like swaps, transfers are chain-abstracted - you don't need to worry about which network the recipient is on or having gas tokens.
+
+## Understanding cross-chain transfers
+
+Traditional token transfers require:
+
+- Sending from and to the same blockchain network
+- Holding native tokens for gas fees on that network
+- Manually bridging if the recipient is on a different chain
+- Network switching in your wallet
+
+With OneBalance transfers:
+
+- Send to any address on any supported chain
+- No gas tokens required
+- Automatic cross-chain routing
+- One-click execution
+
+## Performing a transfer
+
+<Steps>
+  <Step title="Navigate to the Transfer page">
+    Click the **Transfer** tab in the navigation menu to access the transfer interface.
+  </Step>
+
+  <Step title="Select the token to send">
+    In the **You're sending** section:
+    
+    - Click the token selector dropdown
+    - View all tokens you currently hold
+    - Each token displays:
+      - Token icon and symbol
+      - Your total balance across all chains
+      - USD value of your balance
+    - Select the token you want to send
+  </Step>
+
+  <Step title="Enter the amount">
+    Type the amount of tokens you want to send in the amount input field.
+    
+    Quick percentage buttons are available:
+    - **25%** - Send a quarter of your balance
+    - **50%** - Send half of your balance
+    - **75%** - Send three-quarters of your balance
+    - **MAX** - Send your entire balance
+    
+    The USD value updates as you type.
+  </Step>
+
+  <Step title="Enter the recipient address">
+    In the **To** section:
+    
+    - Enter the recipient's wallet address
+    - Supported formats:
+      - Ethereum addresses (e.g., `0x1234...`)
+      - ENS names (e.g., `vitalik.eth`)
+    
+    The interface validates the address as you type:
+    - Valid addresses show no error
+    - Invalid addresses display "Please enter a valid Ethereum address" in red
+  </Step>
+
+  <Step title="Select the recipient network">
+    In the **Recipient network** dropdown:
+    
+    - Choose which blockchain the recipient should receive tokens on
+    - Supported networks include:
+      - Arbitrum (default)
+      - Ethereum Mainnet
+      - Optimism
+      - Polygon
+      - Base
+      - And more
+    - Each network shows its icon and name
+    
+    This is the chain where the recipient will receive the tokens.
+  </Step>
+
+  <Step title="Wait for the quote">
+    After entering all information, OneBalance automatically fetches a transfer quote:
+    
+    - "Getting quote..." message appears
+    - The system calculates the optimal route and fees
+    - Quote loads within 1-2 seconds
+    
+    The quote updates if you change any parameter.
+  </Step>
+
+  <Step title="Review the quote details">
+    The quote shows:
+    
+    - **Destination amount**: How much the recipient will receive
+    - **Network fees**: Gas costs and cross-chain fees
+    - **Quote countdown**: 30-second validity timer
+    - **Route information**: Which chains and bridges are used
+    
+    Review these details to ensure everything is correct.
+  </Step>
+
+  <Step title="Execute the transfer">
+    Click the **Transfer** button to send the tokens.
+    
+    Button states:
+    - **"Transfer"** - Ready to send
+    - **"Getting Quote..."** - Fetching quote
+    - **"Executing Transfer..."** - Transaction in progress
+    - **"Insufficient Balance"** - Not enough tokens
+    - **"Login to Transfer"** - Authentication required
+  </Step>
+
+  <Step title="Monitor transaction progress">
+    The transaction status component displays:
+    
+    - **Status**: PENDING, COMPLETED, or FAILED
+    - **Progress updates**: Real-time transaction tracking
+    - **Chain operations**: Which blockchains are processing
+    - **Transaction hashes**: Links to block explorers
+    
+    Status updates automatically every second.
+  </Step>
+
+  <Step title="Transfer completion">
+    When complete:
+    
+    - Status changes to **COMPLETED**
+    - Your balance refreshes automatically
+    - The form clears
+    - Transaction appears in the History tab
+    - Recipient receives tokens on their chosen network
+  </Step>
+</Steps>
+
+<Note>
+Transfers typically take 1-5 minutes depending on the source and destination chains. The recipient doesn't need to take any action - tokens arrive automatically.
+</Note>
+
+## Recipient address validation
+
+OneBalance validates addresses in real-time:
+
+### Valid addresses
+
+- **Ethereum-style addresses**: 42 characters starting with `0x`
+- **ENS names**: Addresses ending in `.eth`
+- Example valid addresses:
+  - `0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb`
+  - `vitalik.eth`
+
+### Invalid addresses
+
+If you enter an invalid address:
+
+- Red error text appears below the input
+- The Transfer button is disabled
+- Quotes are not fetched
+
+Double-check the address before proceeding.
+
+<Warning>
+Always verify the recipient address before sending. Blockchain transactions are irreversible - tokens sent to the wrong address cannot be recovered.
+</Warning>
+
+## Choosing the recipient network
+
+The recipient network determines which blockchain the recipient receives tokens on:
+
+### Why it matters
+
+- **Gas fees**: Different networks have different fee structures
+- **Speed**: Some networks confirm faster than others
+- **Recipient preferences**: The recipient may prefer specific networks
+
+### Network selection tips
+
+<Tip>
+**Use Arbitrum or Optimism** for lower fees and faster confirmations compared to Ethereum Mainnet.
+</Tip>
+
+<Tip>
+**Ask the recipient** which network they prefer if you're unsure.
+</Tip>
+
+<Tip>
+**Check exchange requirements** if sending to a centralized exchange - they often require specific networks.
+</Tip>
+
+### Changing the network
+
+You can change the recipient network at any time:
+
+- The quote automatically updates for the new network
+- Different networks may have different fees
+- The destination amount may change based on the network
+
+## Understanding transfer fees
+
+Transfer quotes include all costs:
+
+- **Source chain fees**: Gas to initiate the transfer
+- **Destination chain fees**: Gas to deliver tokens
+- **Bridge fees**: If crossing chains (if applicable)
+
+The destination amount shows what the recipient receives after all fees.
+
+<Note>
+No hidden fees - the quote shows the exact amount the recipient will receive.
+</Note>
+
+## Advanced features
+
+### Canceling a quote
+
+Before executing the transfer:
+
+- Click **Cancel Quote** to clear the quote
+- The form stays populated so you can make adjustments
+- Fetch a new quote by changing any parameter
+
+### Quote expiration
+
+Transfer quotes expire after 30 seconds:
+
+- A countdown timer shows remaining validity
+- Expired quotes automatically refresh
+- You can only execute valid quotes
+
+### Same-token transfers
+
+When transferring tokens:
+
+- Source and destination token are the same
+- No swapping occurs - just cross-chain transfer
+- Simpler routing than swaps
+
+## Best practices
+
+<Tip>
+**Verify the address** - Copy-paste addresses instead of typing to avoid errors.
+</Tip>
+
+<Tip>
+**Send a test transaction** - For large amounts, send a small test transfer first to verify the address.
+</Tip>
+
+<Tip>
+**Choose the right network** - Ask the recipient which network they prefer or check exchange requirements.
+</Tip>
+
+<Tip>
+**Save common addresses** - Keep a list of frequently-used addresses for quick reference.
+</Tip>
+
+<Tip>
+**Check the quote** - Review the destination amount to ensure fees are acceptable.
+</Tip>
+
+## Troubleshooting
+
+### Address not validating
+
+- Ensure the address starts with `0x` and is 42 characters
+- Check for typos or extra spaces
+- Verify it's an Ethereum-compatible address
+- Try an ENS name if available (e.g., `name.eth`)
+
+### Quote not loading
+
+- Verify all fields are filled correctly
+- Check that the address is valid
+- Ensure you have sufficient balance
+- Try refreshing the page
+
+### Transfer button disabled
+
+The Transfer button may be disabled if:
+
+- Address is invalid or empty
+- Amount is zero or empty
+- Insufficient balance
+- Quote hasn't loaded or has expired
+- Not logged in
+
+### Transaction failed
+
+If a transfer fails:
+
+- Check the transaction status for error details
+- View the transaction on block explorers
+- Your tokens are automatically refunded
+- Try again with a smaller amount
+
+### Recipient didn't receive tokens
+
+- Check the transaction status (may still be pending)
+- Verify the recipient address is correct
+- Confirm the recipient is checking the correct network
+- Wait for blockchain confirmations (can take several minutes)
+- Check the transaction hash on the block explorer
+
+## Transfer vs. Swap
+
+| Feature | Transfer | Swap |
+|---------|----------|------|
+| **Purpose** | Send tokens to another address | Exchange one token for another |
+| **Recipient** | Specified address | Your own address |
+| **Tokens** | Same token in and out | Different tokens |
+| **Use case** | Sending to friends, exchanges, other wallets | Trading, portfolio rebalancing |
+
+<Note>
+Use Transfer to send tokens to others. Use Swap to exchange tokens for yourself.
+</Note>
