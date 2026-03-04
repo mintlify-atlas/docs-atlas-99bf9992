@@ -1,0 +1,133 @@
+---
+title: Account API
+description: Account management and address prediction operations
+---
+
+## Overview
+
+The Account API provides operations for managing user accounts and predicting account addresses. This is essential for getting the smart contract wallet address before any transactions are made.
+
+## Import
+
+```typescript
+import { accountApi } from '@/lib/api/account';
+```
+
+## Functions
+
+### predictAddress
+
+Predicts the smart contract wallet address for a given session and admin address.
+
+```typescript
+accountApi.predictAddress(
+  sessionAddress: string,
+  adminAddress: string
+): Promise<string>
+```
+
+<ParamField path="sessionAddress" type="string" required>
+  The session address from the embedded wallet
+</ParamField>
+
+<ParamField path="adminAddress" type="string" required>
+  The admin address (typically the same as session address for most users)
+</ParamField>
+
+**Returns**: `Promise<string>` - The predicted account address
+
+#### Example
+
+```typescript
+import { accountApi } from '@/lib/api/account';
+
+async function getPredictedAddress(walletAddress: string) {
+  try {
+    const predictedAddress = await accountApi.predictAddress(
+      walletAddress,
+      walletAddress
+    );
+    
+    console.log('Predicted address:', predictedAddress);
+    return predictedAddress;
+  } catch (error) {
+    console.error('Failed to predict address:', error);
+    throw error;
+  }
+}
+```
+
+## Usage in Application
+
+The predicted address is used throughout the application for:
+
+1. **Balance queries** - Fetch user token balances before any transactions
+2. **Quote requests** - Include the account address in swap/transfer quotes
+3. **Transaction execution** - Sign and execute transactions with the predicted address
+
+### Integration with useQuotes Hook
+
+```typescript
+import { useQuotes } from '@/lib/hooks';
+import { accountApi } from '@/lib/api/account';
+import { usePrivy } from '@privy-io/react-auth';
+
+function SwapComponent() {
+  const { user } = usePrivy();
+  const embeddedWallet = user?.linkedAccounts?.find(
+    account => account.type === 'wallet' && account.walletClient === 'privy'
+  );
+  
+  const [predictedAddress, setPredictedAddress] = useState<string>('');
+  
+  useEffect(() => {
+    if (embeddedWallet?.address) {
+      accountApi.predictAddress(
+        embeddedWallet.address,
+        embeddedWallet.address
+      ).then(setPredictedAddress);
+    }
+  }, [embeddedWallet]);
+  
+  // Use predictedAddress for quotes and transactions
+}
+```
+
+## API Endpoint
+
+**POST** `/account/predict-address`
+
+**Request Body**:
+```json
+{
+  "sessionAddress": "0x1234...",
+  "adminAddress": "0x1234..."
+}
+```
+
+**Response**:
+```json
+{
+  "predictedAddress": "0x5678..."
+}
+```
+
+## Error Handling
+
+```typescript
+try {
+  const address = await accountApi.predictAddress(sessionAddress, adminAddress);
+} catch (error) {
+  if (error.response?.status === 400) {
+    console.error('Invalid address format');
+  } else if (error.response?.status === 500) {
+    console.error('Server error predicting address');
+  }
+}
+```
+
+## Related APIs
+
+- [Quotes API](/api/quotes) - Uses predicted address for quote requests
+- [Balances API](/api/balances) - Queries balances for predicted address
+- [useQuotes Hook](/api/hooks/use-quotes) - Integrates address prediction

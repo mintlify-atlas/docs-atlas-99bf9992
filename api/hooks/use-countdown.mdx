@@ -1,0 +1,209 @@
+---
+title: useCountdown
+description: React hook for countdown timers with expiration callbacks
+---
+
+## Overview
+
+The `useCountdown` hook provides a countdown timer that updates every second and triggers a callback when the timer expires. It's primarily used for quote expiration tracking.
+
+## Import
+
+```typescript
+import { useCountdown } from '@/lib/hooks';
+```
+
+## Signature
+
+```typescript
+function useCountdown(
+  timestamp: number,
+  onExpire?: () => void
+): {
+  timeLeft: number;
+  formattedTime: string;
+  isExpired: boolean;
+}
+```
+
+## Parameters
+
+<ParamField path="timestamp" type="number" required>
+  Unix timestamp (in seconds) when the countdown should expire
+</ParamField>
+
+<ParamField path="onExpire" type="() => void">
+  Optional callback function to execute when the countdown reaches zero
+</ParamField>
+
+## Return Value
+
+<ResponseField name="timeLeft" type="number">
+  Number of seconds remaining until expiration
+</ResponseField>
+
+<ResponseField name="formattedTime" type="string">
+  Formatted time string showing remaining seconds, or "Expired" when done
+</ResponseField>
+
+<ResponseField name="isExpired" type="boolean">
+  True when the countdown has reached zero
+</ResponseField>
+
+## Usage Examples
+
+### Basic Countdown
+
+```typescript
+import { useCountdown } from '@/lib/hooks';
+
+function CountdownDisplay({ expirationTimestamp }: { expirationTimestamp: number }) {
+  const { timeLeft, formattedTime, isExpired } = useCountdown(expirationTimestamp);
+  
+  return (
+    <div>
+      {isExpired ? (
+        <span>Time expired!</span>
+      ) : (
+        <span>{timeLeft} seconds remaining</span>
+      )}
+    </div>
+  );
+}
+```
+
+### Quote Expiration Timer
+
+```typescript
+import { useCountdown } from '@/lib/hooks';
+
+function QuoteCountdown({ 
+  expirationTimestamp, 
+  onRefresh 
+}: { 
+  expirationTimestamp: number;
+  onRefresh: () => void;
+}) {
+  const { timeLeft, isExpired } = useCountdown(
+    expirationTimestamp,
+    onRefresh // Auto-refresh when expired
+  );
+  
+  return (
+    <div>
+      <p>Quote expires in: {timeLeft}s</p>
+      {isExpired && <button onClick={onRefresh}>Get New Quote</button>}
+    </div>
+  );
+}
+```
+
+### With Visual Progress
+
+```typescript
+import { useCountdown } from '@/lib/hooks';
+
+function ProgressCountdown({ expirationTimestamp }: { expirationTimestamp: number }) {
+  const TOTAL_SECONDS = 30;
+  const { timeLeft, formattedTime } = useCountdown(expirationTimestamp);
+  
+  const percentageLeft = (timeLeft / TOTAL_SECONDS) * 100;
+  
+  return (
+    <div>
+      <div className="progress-bar">
+        <div 
+          className="progress-fill" 
+          style={{ width: `${percentageLeft}%` }}
+        />
+      </div>
+      <span>{formattedTime}</span>
+    </div>
+  );
+}
+```
+
+### QuoteCountdown Component
+
+The actual `QuoteCountdown` component in the application uses this hook:
+
+```typescript components/QuoteCountdown.tsx
+import { useCountdown } from '@/lib/hooks';
+import { Clock } from 'lucide-react';
+
+export const QuoteCountdown = ({
+  expirationTimestamp,
+  onExpire,
+}: {
+  expirationTimestamp: number;
+  onExpire: () => void;
+}) => {
+  const { timeLeft, isExpired } = useCountdown(expirationTimestamp, onExpire);
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <Clock className="h-4 w-4" />
+      <span>
+        {isExpired ? 'Quote expired' : `Quote expires in ${timeLeft}s`}
+      </span>
+    </div>
+  );
+};
+```
+
+## Implementation Details
+
+### Automatic Cleanup
+
+The hook automatically cleans up the interval timer when:
+- The component unmounts
+- The timestamp parameter changes
+- The countdown reaches zero
+
+```typescript
+useEffect(() => {
+  const timer = setInterval(() => {
+    // Update countdown
+  }, 1000);
+
+  return () => clearInterval(timer); // Cleanup
+}, [timestamp, onExpire]);
+```
+
+### Time Calculation
+
+The countdown calculates remaining time by:
+1. Converting Unix timestamp (seconds) to milliseconds
+2. Subtracting current time
+3. Flooring to nearest second
+4. Clamping to zero minimum
+
+```typescript
+const calculateTimeLeft = () => {
+  const difference = timestamp * 1000 - Date.now();
+  return Math.max(0, Math.floor(difference / 1000));
+};
+```
+
+## Best Practices
+
+<Card title="Use with quote expiration" icon="clock">
+  Quotes from the OneBalance API have a 30-second validity period. Use this hook to track expiration and automatically refresh quotes.
+</Card>
+
+<Card title="Provide expiration callback" icon="rotate">
+  Always pass an `onExpire` callback to handle what should happen when the timer runs out (e.g., refresh quote, show warning).
+</Card>
+
+<Card title="Handle edge cases" icon="triangle-exclamation">
+  Check `isExpired` before allowing users to execute actions based on the countdown (e.g., prevent swap execution with expired quote).
+</Card>
+
+## Related Hooks
+
+- [useQuotes](/api/hooks/use-quotes) - Uses countdown for quote expiration tracking
+
+## Related Components
+
+- [QuoteDetails](/components/quote-details) - Displays quote information with countdown
+- [SwapForm](/components/swap-form) - Uses countdown for quote validity

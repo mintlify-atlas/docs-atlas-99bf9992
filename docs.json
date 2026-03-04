@@ -70,7 +70,8 @@
               "api/transactions",
               "api/balances",
               "api/assets",
-              "api/chains"
+              "api/chains",
+              "api/account"
             ]
           },
           {
@@ -80,7 +81,8 @@
               "api/hooks/use-balances",
               "api/hooks/use-assets",
               "api/hooks/use-chains",
-              "api/hooks/use-embedded-wallet"
+              "api/hooks/use-embedded-wallet",
+              "api/hooks/use-countdown"
             ]
           },
           {
