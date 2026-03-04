@@ -1,0 +1,149 @@
+{
+  "projectType": "saas",
+  "projectName": "OneBalance Chain-Abstracted Swap",
+  "projectDescription": "A modern chain-abstracted token swap and transfer application powered by OneBalance API",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "features"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/chain-abstracted-swaps",
+              "features/cross-chain-transfers",
+              "features/portfolio-tracking",
+              "features/transaction-history"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/authentication",
+              "guide/swapping-tokens",
+              "guide/transferring-tokens",
+              "guide/managing-wallet"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "integration/setup",
+              "integration/configuration",
+              "integration/onebalance-api",
+              "integration/privy-wallet"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Modules",
+            "pages": [
+              "api/quotes",
+              "api/transactions",
+              "api/balances",
+              "api/assets",
+              "api/chains"
+            ]
+          },
+          {
+            "group": "React Hooks",
+            "pages": [
+              "api/hooks/use-quotes",
+              "api/hooks/use-balances",
+              "api/hooks/use-assets",
+              "api/hooks/use-chains",
+              "api/hooks/use-embedded-wallet"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types/quote",
+              "api/types/transaction",
+              "api/types/balances",
+              "api/types/assets",
+              "api/types/chains"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Trading Components",
+            "pages": [
+              "components/swap-form",
+              "components/transfer-form",
+              "components/token-input",
+              "components/quote-details"
+            ]
+          },
+          {
+            "group": "Wallet Components",
+            "pages": [
+              "components/connect-button",
+              "components/balance-display",
+              "components/asset-list"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "components/transaction-status",
+              "components/transaction-history",
+              "components/onboarding"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Chain-abstracted token swaps across multiple blockchains",
+    "Cross-chain transfers without network switching",
+    "Real-time quotes with 30-second validity",
+    "Aggregated portfolio tracking across all chains",
+    "Gasless transactions via OneBalance",
+    "Social login with embedded wallets via Privy",
+    "Interactive onboarding for new users",
+    "Complete transaction history tracking"
+  ],
+  "publicApiSurface": [
+    "quotesApi.getQuote",
+    "quotesApi.executeQuote",
+    "quotesApi.getQuoteStatus",
+    "transactionsApi.getTransactionHistory",
+    "balancesApi.getBalances",
+    "assetsApi.getAssets",
+    "chainsApi.getChains",
+    "useQuotes",
+    "useBalances",
+    "useAssets",
+    "useChains",
+    "useEmbeddedWallet",
+    "useTransactionHistory",
+    "SwapForm",
+    "TransferForm",
+    "TokenInput",
+    "QuoteDetails",
+    "TransactionStatus",
+    "ConnectButton"
+  ]
+}
